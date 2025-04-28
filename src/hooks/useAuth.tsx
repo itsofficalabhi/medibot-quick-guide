@@ -5,6 +5,7 @@ interface User {
   id: string;
   name: string;
   email: string;
+  role: 'doctor' | 'user';
 }
 
 interface AuthContextType {
@@ -17,13 +18,48 @@ interface AuthContextType {
   forgotPassword: (email: string) => Promise<boolean>;
 }
 
+// Test accounts data
+const testAccounts = {
+  doctors: [
+    {
+      id: 'doc1',
+      email: 'doctor1@test.com',
+      password: 'doctor123',
+      name: 'Dr. Sarah Johnson',
+      role: 'doctor' as const
+    },
+    {
+      id: 'doc2',
+      email: 'doctor2@test.com',
+      password: 'doctor123',
+      name: 'Dr. Michael Chen',
+      role: 'doctor' as const
+    }
+  ],
+  users: [
+    {
+      id: 'user1',
+      email: 'patient1@test.com',
+      password: 'patient123',
+      name: 'John Smith',
+      role: 'user' as const
+    },
+    {
+      id: 'user2',
+      email: 'patient2@test.com',
+      password: 'patient123',
+      name: 'Jane Doe',
+      role: 'user' as const
+    }
+  ]
+};
+
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  // Check if user is logged in on initial load
   useEffect(() => {
     const checkAuth = async () => {
       const storedUser = localStorage.getItem('user');
@@ -36,37 +72,45 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     checkAuth();
   }, []);
 
-  // Mock login function (to be replaced with actual API calls)
   const login = async (email: string, password: string) => {
     try {
-      // Mock successful login
-      const mockUser = {
-        id: '123',
-        name: 'Test User',
-        email: email
-      };
+      // Check against test accounts
+      const doctorAccount = testAccounts.doctors.find(
+        doc => doc.email === email && doc.password === password
+      );
       
-      setUser(mockUser);
-      localStorage.setItem('user', JSON.stringify(mockUser));
-      return true;
+      const userAccount = testAccounts.users.find(
+        user => user.email === email && user.password === password
+      );
+
+      const account = doctorAccount || userAccount;
+
+      if (account) {
+        const { password: _, ...userInfo } = account;
+        setUser(userInfo);
+        localStorage.setItem('user', JSON.stringify(userInfo));
+        return true;
+      }
+      
+      return false;
     } catch (error) {
       console.error('Login error:', error);
       return false;
     }
   };
 
-  // Mock register function
   const register = async (name: string, email: string, password: string) => {
     try {
-      // Mock successful registration
-      const mockUser = {
-        id: '123',
-        name: name,
-        email: email
+      // For demo, create a new user account
+      const newUser = {
+        id: `user${Date.now()}`,
+        name,
+        email,
+        role: 'user' as const
       };
       
-      setUser(mockUser);
-      localStorage.setItem('user', JSON.stringify(mockUser));
+      setUser(newUser);
+      localStorage.setItem('user', JSON.stringify(newUser));
       return true;
     } catch (error) {
       console.error('Registration error:', error);
@@ -74,22 +118,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Logout function
   const logout = () => {
     setUser(null);
     localStorage.removeItem('user');
   };
 
-  // Mock forgot password function
   const forgotPassword = async (email: string) => {
-    try {
-      // Mock sending reset email
-      console.log(`Password reset email sent to ${email}`);
-      return true;
-    } catch (error) {
-      console.error('Forgot password error:', error);
-      return false;
-    }
+    // Mock forgot password functionality
+    console.log(`Password reset email would be sent to ${email}`);
+    return true;
   };
 
   const authContextValue: AuthContextType = {

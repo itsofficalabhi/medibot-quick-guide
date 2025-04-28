@@ -1,1 +1,93 @@
-/* We're using Tailwind CSS for styling */
+
+/* We're using Tailwind CSS for most styling */
+
+/* Chat interface custom styling */
+.chat-message.user {
+  background-color: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+}
+
+.chat-message.bot {
+  background-color: hsl(var(--secondary));
+  color: hsl(var(--secondary-foreground));
+}
+
+/* Typing indicator animation */
+.typing-indicator span {
+  animation: blink 1.4s infinite both;
+}
+
+.typing-indicator span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.typing-indicator span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes blink {
+  0% { opacity: 0.1; }
+  20% { opacity: 1; }
+  100% { opacity: 0.1; }
+}
+
+/* Toggle switch for settings */
+.toggle {
+  appearance: none;
+  position: relative;
+  width: 40px;
+  height: 20px;
+  border-radius: 10px;
+  background-color: hsl(var(--muted));
+  transition: background-color 0.3s;
+  cursor: pointer;
+}
+
+.toggle:checked {
+  background-color: hsl(var(--primary));
+}
+
+.toggle:before {
+  content: '';
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  top: 2px;
+  left: 2px;
+  background-color: hsl(var(--background));
+  transition: transform 0.3s;
+}
+
+.toggle:checked:before {
+  transform: translateX(20px);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: hsl(var(--muted));
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: hsl(var(--muted-foreground));
+}
+
+/* Enhancement for mobile touch areas */
+@media (max-width: 640px) {
+  button, a {
+    min-height: 44px;
+  }
+
+  .chat-container {
+    height: calc(100vh - 300px);
+  }
+}

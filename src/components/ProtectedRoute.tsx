@@ -8,13 +8,21 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  // For now, we'll mock the authentication since we haven't implemented it yet
-  const isAuthenticated = false; // This will be replaced with actual auth logic
+  const { isAuthenticated, isLoading } = useAuth();
 
+  // Show loading state if authentication is still being checked
+  if (isLoading) {
+    return <div className="flex items-center justify-center min-h-screen">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+    </div>;
+  }
+
+  // Redirect to login if not authenticated
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 
+  // Render children if authenticated
   return <>{children}</>;
 };
 

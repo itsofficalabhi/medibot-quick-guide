@@ -21,49 +21,55 @@ import VideoCallPage from "./pages/VideoCallPage";
 // Layout
 import MainLayout from "./layouts/MainLayout";
 import ProtectedRoute from "./components/ProtectedRoute";
-import { useAuth } from "./hooks/useAuth";
+import { AuthProvider } from "./hooks/useAuth";
 
 const queryClient = new QueryClient();
 
 const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<MainLayout />}>
-              <Route index element={<HomePage />} />
-              <Route path="doctors" element={<DoctorsPage />} />
-              <Route path="doctors/:id" element={<DoctorProfilePage />} />
-              <Route path="chat" element={<ChatPage />} />
-              <Route path="login" element={<LoginPage />} />
-              <Route path="register" element={<RegisterPage />} />
-              <Route path="forgot-password" element={<ForgotPasswordPage />} />
-              
-              {/* Protected routes */}
-              <Route path="dashboard" element={
+      <AuthProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<MainLayout />}>
+                <Route index element={<HomePage />} />
+                <Route path="doctors" element={<DoctorsPage />} />
+                <Route path="doctors/:id" element={<DoctorProfilePage />} />
+                <Route path="chat" element={<ChatPage />} />
+                <Route path="login" element={<LoginPage />} />
+                <Route path="register" element={<RegisterPage />} />
+                <Route path="forgot-password" element={<ForgotPasswordPage />} />
+                
+                {/* Protected routes */}
+                <Route path="dashboard" element={
+                  <ProtectedRoute>
+                    <UserDashboardPage />
+                  </ProtectedRoute>
+                } />
+
+                <Route path="doctor-dashboard" element={
+                  <ProtectedRoute requiredRole="doctor">
+                    <DoctorDashboardPage />
+                  </ProtectedRoute>
+                } />
+                
+                {/* Catch-all route */}
+                <Route path="*" element={<NotFound />} />
+              </Route>
+
+              {/* Standalone routes */}
+              <Route path="video-call" element={
                 <ProtectedRoute>
-                  <UserDashboardPage />
+                  <VideoCallPage />
                 </ProtectedRoute>
               } />
-
-              <Route path="doctor-dashboard" element={
-                <ProtectedRoute>
-                  <DoctorDashboardPage />
-                </ProtectedRoute>
-              } />
-              
-              {/* Catch-all route */}
-              <Route path="*" element={<NotFound />} />
-            </Route>
-
-            {/* Standalone routes */}
-            <Route path="video-call" element={<VideoCallPage />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
+            </Routes>
+          </BrowserRouter>
+        </TooltipProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 };

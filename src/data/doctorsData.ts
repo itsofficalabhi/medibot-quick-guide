@@ -1,4 +1,3 @@
-
 export interface Doctor {
   id: string;
   name: string;
@@ -15,6 +14,7 @@ export interface Doctor {
   about: string;
   profileImage: string;
   consultationFee: number;
+  phone: string;
 }
 
 export const doctors: Doctor[] = [
@@ -36,7 +36,8 @@ export const doctors: Doctor[] = [
     languages: ["English", "Spanish"],
     about: "Dr. Johnson is a board-certified physician with over 12 years of experience in general medicine. She specializes in preventive care and chronic disease management.",
     profileImage: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80",
-    consultationFee: 80
+    consultationFee: 80,
+    phone: "14155552671"
   },
   {
     id: "2",
@@ -56,7 +57,8 @@ export const doctors: Doctor[] = [
     languages: ["English", "Mandarin"],
     about: "Dr. Chen is a cardiologist with extensive experience in diagnosing and treating heart conditions. He is passionate about preventive cardiology and helping patients maintain heart health.",
     profileImage: "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80",
-    consultationFee: 120
+    consultationFee: 120,
+    phone: "14155552672"
   },
   {
     id: "3",
@@ -76,7 +78,8 @@ export const doctors: Doctor[] = [
     languages: ["English", "Spanish"],
     about: "Dr. Rodriguez is a pediatrician dedicated to providing comprehensive care for children from infancy through adolescence. She has a special interest in childhood development and preventive healthcare.",
     profileImage: "https://images.unsplash.com/photo-1651008376811-b90baee60c1f?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=687&q=80",
-    consultationFee: 90
+    consultationFee: 90,
+    phone: "14155552673"
   },
   {
     id: "4",
@@ -96,7 +99,8 @@ export const doctors: Doctor[] = [
     languages: ["English"],
     about: "Dr. Wilson is a board-certified dermatologist specializing in general, surgical, and cosmetic dermatology. He treats various skin conditions and is experienced in teledermatology.",
     profileImage: "https://images.unsplash.com/photo-1622253692010-333f2da6031d?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1064&q=80",
-    consultationFee: 100
+    consultationFee: 100,
+    phone: "14155552674"
   },
   {
     id: "5",
@@ -116,7 +120,8 @@ export const doctors: Doctor[] = [
     languages: ["English", "Hindi"],
     about: "Dr. Patel is a psychiatrist who provides compassionate care for a wide range of mental health conditions. She specializes in anxiety, depression, and stress management.",
     profileImage: "https://images.unsplash.com/photo-1594824476967-48c8b964273f?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=687&q=80",
-    consultationFee: 110
+    consultationFee: 110,
+    phone: "14155552675"
   },
   {
     id: "6",
@@ -136,7 +141,8 @@ export const doctors: Doctor[] = [
     languages: ["English", "Korean"],
     about: "Dr. Lee is an experienced physician who provides comprehensive primary care. He focuses on building long-term relationships with his patients and preventive healthcare.",
     profileImage: "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80",
-    consultationFee: 75
+    consultationFee: 75,
+    phone: "14155552676"
   }
 ];
 

@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
@@ -15,12 +15,20 @@ import {
   Calendar as CalendarIcon
 } from 'lucide-react';
 import { doctors } from '@/data/doctorsData';
+import PaymentGateway from '@/components/PaymentGateway';
+import { useToast } from '@/components/ui/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 
 const DoctorProfilePage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [activeTab, setActiveTab] = useState<'overview' | 'reviews'>('overview');
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null);
+  const [showPayment, setShowPayment] = useState(false);
+  const [selectedConsultationType, setSelectedConsultationType] = useState<'video' | 'chat' | 'phone' | null>(null);
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const { isAuthenticated } = useAuth();
   
   // Find doctor by ID
   const doctor = doctors.find(d => d.id === id);
@@ -44,6 +52,67 @@ const DoctorProfilePage: React.FC = () => {
     '11:00 AM', '11:30 AM', '02:00 PM', '02:30 PM', 
     '03:00 PM', '03:30 PM', '04:00 PM', '04:30 PM'
   ];
+
+  const handleConsultationType = (type: 'video' | 'chat' | 'phone') => {
+    setSelectedConsultationType(type);
+  };
+  
+  const handleBookAppointment = () => {
+    if (!isAuthenticated) {
+      toast({
+        title: "Authentication Required",
+        description: "Please login to book an appointment",
+        variant: "destructive",
+      });
+      navigate('/login', { state: { from: `/doctors/${id}` } });
+      return;
+    }
+
+    if (!selectedDate || !selectedTimeSlot || !selectedConsultationType) {
+      toast({
+        title: "Incomplete Selection",
+        description: selectedConsultationType 
+          ? "Please select a date and time" 
+          : "Please select consultation type, date, and time",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Show payment gateway
+    setShowPayment(true);
+  };
+
+  const handlePaymentSuccess = () => {
+    setShowPayment(false);
+    
+    // Handle different consultation types
+    if (selectedConsultationType === 'video') {
+      // Generate a unique appointment ID
+      const appointmentId = `app-${Date.now()}-${id}`;
+      navigate(`/video-call?appointmentId=${appointmentId}`);
+    } else if (selectedConsultationType === 'chat') {
+      // Open WhatsApp
+      const phoneNumber = doctor?.phone || "15551234567"; // Default if missing
+      const message = "Hello, I would like to start a chat consultation.";
+      window.open(`https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`, "_blank");
+    } else if (selectedConsultationType === 'phone') {
+      // For phone consultation, we'll direct to a phone initiation page
+      // In a real app, you'd use a service like Twilio to initiate the call
+      const phoneNumber = doctor?.phone || "+15551234567"; // Default if missing
+      window.location.href = `tel:${phoneNumber}`;
+    }
+    
+    // Show success toast
+    toast({
+      title: "Appointment Booked Successfully",
+      description: `Your ${selectedConsultationType} consultation has been booked for ${selectedDate} at ${selectedTimeSlot}`,
+    });
+  };
+  
+  const handlePaymentCancel = () => {
+    setShowPayment(false);
+  };
   
   if (!doctor) {
     return (
@@ -53,6 +122,22 @@ const DoctorProfilePage: React.FC = () => {
         <Link to="/doctors">
           <Button>Back to Doctors</Button>
         </Link>
+      </div>
+    );
+  }
+
+  // If payment modal is shown, render that instead
+  if (showPayment) {
+    return (
+      <div className="container mx-auto px-4 py-12">
+        <PaymentGateway 
+          amount={doctor.consultationFee + 5}
+          appointmentDate={selectedDate || undefined} 
+          appointmentTime={selectedTimeSlot || undefined}
+          doctorName={doctor.name}
+          onSuccess={handlePaymentSuccess}
+          onCancel={handlePaymentCancel}
+        />
       </div>
     );
   }
@@ -131,15 +216,26 @@ const DoctorProfilePage: React.FC = () => {
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3">
-              <Button className="flex items-center gap-2">
+              <Button 
+                className={`flex items-center gap-2 ${selectedConsultationType === 'video' ? 'bg-green-600 hover:bg-green-700' : ''}`}
+                onClick={() => handleConsultationType('video')}
+              >
                 <Video className="h-4 w-4" />
                 Video Consultation
               </Button>
-              <Button variant="outline" className="flex items-center gap-2">
+              <Button 
+                variant={selectedConsultationType === 'chat' ? "default" : "outline"} 
+                className={`flex items-center gap-2 ${selectedConsultationType === 'chat' ? 'bg-green-600 hover:bg-green-700' : ''}`}
+                onClick={() => handleConsultationType('chat')}
+              >
                 <MessageSquare className="h-4 w-4" />
                 Chat Consultation
               </Button>
-              <Button variant="outline" className="flex items-center gap-2">
+              <Button 
+                variant={selectedConsultationType === 'phone' ? "default" : "outline"} 
+                className={`flex items-center gap-2 ${selectedConsultationType === 'phone' ? 'bg-green-600 hover:bg-green-700' : ''}`}
+                onClick={() => handleConsultationType('phone')}
+              >
                 <Phone className="h-4 w-4" />
                 Phone Consultation
               </Button>
@@ -324,7 +420,11 @@ const DoctorProfilePage: React.FC = () => {
                 </div>
               </div>
               
-              <Button className="w-full" disabled={!selectedDate || !selectedTimeSlot}>
+              <Button 
+                className="w-full" 
+                disabled={!selectedDate || !selectedTimeSlot || !selectedConsultationType}
+                onClick={handleBookAppointment}
+              >
                 <CalendarIcon className="h-4 w-4 mr-2" />
                 Book Appointment
               </Button>

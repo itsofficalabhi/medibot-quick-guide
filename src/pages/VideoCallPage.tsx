@@ -1,9 +1,10 @@
 
 import React, { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { User, Mic, MicOff, Video, VideoOff, Phone } from 'lucide-react';
+import { useToast } from '@/components/ui/use-toast';
 
 const VideoCallPage: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -12,21 +13,35 @@ const VideoCallPage: React.FC = () => {
   const [isMicOn, setIsMicOn] = useState(true);
   const [isVideoOn, setIsVideoOn] = useState(true);
   const [callStatus, setCallStatus] = useState<'connecting' | 'connected' | 'ended'>('connecting');
+  const { toast } = useToast();
+  const navigate = useNavigate();
 
   useEffect(() => {
-    // This simulates initializing the Zoom SDK and joining a meeting
+    if (!appointmentId) {
+      toast({
+        title: "Invalid Access",
+        description: "No valid appointment found for this video call.",
+        variant: "destructive",
+      });
+      setTimeout(() => {
+        navigate('/dashboard');
+      }, 3000);
+      return;
+    }
+
+    // This simulates initializing the video call API (like Zoom SDK) and joining a meeting
     const timer = setTimeout(() => {
       setIsLoading(false);
       setCallStatus('connected');
-      console.log(`Connected to Zoom call for appointment ${appointmentId}`);
+      console.log(`Connected to video call for appointment ${appointmentId}`);
     }, 2000);
 
     return () => {
       clearTimeout(timer);
-      // This would normally clean up the Zoom SDK
-      console.log('Cleaning up Zoom call resources');
+      // This would normally clean up the video call API resources
+      console.log('Cleaning up video call resources');
     };
-  }, [appointmentId]);
+  }, [appointmentId, navigate, toast]);
 
   const toggleMic = () => {
     setIsMicOn(!isMicOn);
@@ -40,9 +55,14 @@ const VideoCallPage: React.FC = () => {
 
   const endCall = () => {
     setCallStatus('ended');
-    // In a real implementation, this would close the Zoom session
+    // In a real implementation, this would close the video call session
+    toast({
+      title: "Call Ended",
+      description: "Your consultation has ended. Thank you for using MediClinic.",
+    });
+    
     setTimeout(() => {
-      window.close();
+      navigate('/dashboard');
     }, 2000);
   };
 
@@ -83,7 +103,7 @@ const VideoCallPage: React.FC = () => {
                 <p className="text-muted-foreground mb-4">
                   Your video consultation has ended. Thank you for using our service.
                 </p>
-                <Button onClick={() => window.close()}>Close Window</Button>
+                <Button onClick={() => navigate('/dashboard')}>Return to Dashboard</Button>
               </CardContent>
             </Card>
           </div>
@@ -108,7 +128,7 @@ const VideoCallPage: React.FC = () => {
                   </div>
                 )}
                 <div className="absolute bottom-4 left-4 bg-black/50 px-3 py-1 rounded text-white text-sm">
-                  You (Doctor)
+                  Doctor
                 </div>
               </div>
               
@@ -118,7 +138,7 @@ const VideoCallPage: React.FC = () => {
                   <User className="h-20 w-20 text-gray-500" />
                 </div>
                 <div className="absolute bottom-4 left-4 bg-black/50 px-3 py-1 rounded text-white text-sm">
-                  Patient
+                  You (Patient)
                 </div>
               </div>
             </div>

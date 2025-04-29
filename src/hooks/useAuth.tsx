@@ -54,6 +54,8 @@ const testAccounts = {
   ]
 };
 
+const AUTH_STORAGE_KEY = 'mediclinic_user';
+
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
@@ -62,11 +64,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const checkAuth = async () => {
-      const storedUser = localStorage.getItem('user');
-      if (storedUser) {
-        setUser(JSON.parse(storedUser));
+      try {
+        const storedUser = localStorage.getItem(AUTH_STORAGE_KEY);
+        if (storedUser) {
+          const parsedUser = JSON.parse(storedUser);
+          setUser(parsedUser);
+        }
+      } catch (error) {
+        console.error('Error checking authentication:', error);
+        // Clear potentially corrupted data
+        localStorage.removeItem(AUTH_STORAGE_KEY);
+      } finally {
+        setIsLoading(false);
       }
-      setIsLoading(false);
     };
 
     checkAuth();
@@ -80,7 +90,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       );
       
       const userAccount = testAccounts.users.find(
-        user => user.email === email && user.password === password
+        usr => usr.email === email && usr.password === password
       );
 
       const account = doctorAccount || userAccount;
@@ -88,7 +98,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (account) {
         const { password: _, ...userInfo } = account;
         setUser(userInfo);
-        localStorage.setItem('user', JSON.stringify(userInfo));
+        localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(userInfo));
         return true;
       }
       
@@ -110,7 +120,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       };
       
       setUser(newUser);
-      localStorage.setItem('user', JSON.stringify(newUser));
+      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(newUser));
       return true;
     } catch (error) {
       console.error('Registration error:', error);
@@ -120,7 +130,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem('user');
+    localStorage.removeItem(AUTH_STORAGE_KEY);
   };
 
   const forgotPassword = async (email: string) => {

@@ -1,14 +1,16 @@
 
 import React from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
+  requiredRole?: 'doctor' | 'user';
 }
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const { isAuthenticated, isLoading } = useAuth();
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredRole }) => {
+  const { isAuthenticated, isLoading, user } = useAuth();
+  const location = useLocation();
 
   // Show loading state if authentication is still being checked
   if (isLoading) {
@@ -19,10 +21,20 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
 
   // Redirect to login if not authenticated
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // Render children if authenticated
+  // Check for role-specific access if required
+  if (requiredRole && user?.role !== requiredRole) {
+    // Redirect to appropriate dashboard based on user role
+    if (user?.role === 'doctor') {
+      return <Navigate to="/doctor-dashboard" replace />;
+    } else {
+      return <Navigate to="/dashboard" replace />;
+    }
+  }
+
+  // Render children if authenticated and role check passes
   return <>{children}</>;
 };
 

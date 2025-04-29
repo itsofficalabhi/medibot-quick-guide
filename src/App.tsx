@@ -13,12 +13,15 @@ import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import UserDashboardPage from "./pages/UserDashboardPage";
+import DoctorDashboardPage from "./pages/DoctorDashboardPage";
 import ChatPage from "./pages/ChatPage";
 import NotFound from "./pages/NotFound";
+import VideoCallPage from "./pages/VideoCallPage";
 
 // Layout
 import MainLayout from "./layouts/MainLayout";
 import ProtectedRoute from "./components/ProtectedRoute";
+import { useAuth } from "./hooks/useAuth";
 
 const queryClient = new QueryClient();
 
@@ -45,10 +48,19 @@ const App = () => {
                   <UserDashboardPage />
                 </ProtectedRoute>
               } />
+
+              <Route path="doctor-dashboard" element={
+                <ProtectedRoute>
+                  <DoctorDashboardPage />
+                </ProtectedRoute>
+              } />
               
               {/* Catch-all route */}
               <Route path="*" element={<NotFound />} />
             </Route>
+
+            {/* Standalone routes */}
+            <Route path="video-call" element={<VideoCallPage />} />
           </Routes>
         </BrowserRouter>
       </TooltipProvider>

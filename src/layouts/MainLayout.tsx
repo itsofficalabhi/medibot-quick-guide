@@ -1,18 +1,26 @@
 
 import React, { useState } from 'react';
-import { Outlet, Link } from 'react-router-dom';
+import { Outlet, Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ModeToggle } from '@/components/ModeToggle';
 import { useMediaQuery } from '@/hooks/use-media-query';
 import { Menu, X, Phone, MessageSquare, Calendar, User } from 'lucide-react';
 import Footer from '@/components/Footer';
+import { useAuth } from '@/hooks/useAuth';
 
 const MainLayout = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const isDesktop = useMediaQuery("(min-width: 768px)");
+  const { isAuthenticated, user, logout } = useAuth();
+  const navigate = useNavigate();
 
   const toggleMobileMenu = () => {
     setMobileMenuOpen(!mobileMenuOpen);
+  };
+
+  const handleLogout = () => {
+    logout();
+    navigate('/');
   };
 
   return (
@@ -49,14 +57,28 @@ const MainLayout = () => {
           <div className="flex items-center gap-4">
             <ModeToggle />
             {isDesktop ? (
-              <div className="flex items-center gap-2">
-                <Link to="/login">
-                  <Button variant="outline" size="sm">Log in</Button>
-                </Link>
-                <Link to="/register">
-                  <Button size="sm">Sign up</Button>
-                </Link>
-              </div>
+              isAuthenticated ? (
+                <div className="flex items-center gap-3">
+                  <Link to={user?.role === 'doctor' ? '/doctor-dashboard' : '/dashboard'}>
+                    <Button variant="outline" size="sm" className="flex items-center gap-1">
+                      <User className="h-4 w-4" />
+                      <span>Dashboard</span>
+                    </Button>
+                  </Link>
+                  <Button size="sm" variant="ghost" onClick={handleLogout}>
+                    Log out
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Link to="/login">
+                    <Button variant="outline" size="sm">Log in</Button>
+                  </Link>
+                  <Link to="/register">
+                    <Button size="sm">Sign up</Button>
+                  </Link>
+                </div>
+              )
             ) : (
               <Button variant="ghost" size="icon" onClick={toggleMobileMenu}>
                 {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -73,14 +95,28 @@ const MainLayout = () => {
               <Link to="/doctors" className="flex items-center py-2" onClick={toggleMobileMenu}>Doctors</Link>
               <Link to="/chat" className="flex items-center py-2" onClick={toggleMobileMenu}>AI Assistant</Link>
               <div className="border-t pt-4 mt-2">
-                <div className="flex flex-col gap-2">
-                  <Link to="/login" onClick={toggleMobileMenu}>
-                    <Button variant="outline" className="w-full">Log in</Button>
-                  </Link>
-                  <Link to="/register" onClick={toggleMobileMenu}>
-                    <Button className="w-full">Sign up</Button>
-                  </Link>
-                </div>
+                {isAuthenticated ? (
+                  <div className="flex flex-col gap-2">
+                    <Link to={user?.role === 'doctor' ? '/doctor-dashboard' : '/dashboard'} onClick={toggleMobileMenu}>
+                      <Button variant="outline" className="w-full flex items-center justify-center gap-2">
+                        <User className="h-4 w-4" />
+                        <span>Dashboard</span>
+                      </Button>
+                    </Link>
+                    <Button className="w-full" onClick={() => { toggleMobileMenu(); handleLogout(); }}>
+                      Log out
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-2">
+                    <Link to="/login" onClick={toggleMobileMenu}>
+                      <Button variant="outline" className="w-full">Log in</Button>
+                    </Link>
+                    <Link to="/register" onClick={toggleMobileMenu}>
+                      <Button className="w-full">Sign up</Button>
+                    </Link>
+                  </div>
+                )}
               </div>
             </nav>
           </div>

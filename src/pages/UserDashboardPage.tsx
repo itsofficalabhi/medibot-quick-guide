@@ -1,15 +1,16 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { Separator } from '@/components/ui/separator';
-import { CalendarIcon, User, FileText, Settings, Clock, CheckCircle } from 'lucide-react';
+import { CalendarIcon, User, FileText, Settings, Clock, CheckCircle, ReceiptIcon } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import PrescriptionsList from '../components/PrescriptionsList';
+import PaymentReceipt from '../components/PaymentReceipt';
 
 const UserDashboardPage: React.FC = () => {
   const { user, logout } = useAuth();
-  const [activeTab, setActiveTab] = useState<'appointments' | 'profile' | 'records' | 'settings'>('appointments');
+  const [activeTab, setActiveTab] = useState<'appointments' | 'profile' | 'records' | 'receipts' | 'settings'>('appointments');
 
   // Mock data for appointments
   const upcomingAppointments = [
@@ -55,13 +56,21 @@ const UserDashboardPage: React.FC = () => {
   ];
 
   const renderAppointmentContent = () => {
+    // Get additional appointments from localStorage if they exist
+    const userAppointments = JSON.parse(localStorage.getItem(`appointments_${user?.id}`) || '[]');
+    
+    const allUpcomingAppointments = [
+      ...upcomingAppointments,
+      ...userAppointments.filter((app: any) => new Date(app.date) >= new Date())
+    ];
+    
     return (
       <div>
         <div className="mb-6">
           <h3 className="text-lg font-semibold mb-4">Upcoming Appointments</h3>
-          {upcomingAppointments.length > 0 ? (
+          {allUpcomingAppointments.length > 0 ? (
             <div className="space-y-3">
-              {upcomingAppointments.map((appointment) => (
+              {allUpcomingAppointments.map((appointment: any) => (
                 <Card key={appointment.id} className="overflow-hidden">
                   <CardContent className="p-0">
                     <div className="grid md:grid-cols-3 gap-4">
@@ -79,6 +88,10 @@ const UserDashboardPage: React.FC = () => {
                             {appointment.appointmentType === 'Video Consultation' ? (
                               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-primary mr-1" viewBox="0 0 20 20" fill="currentColor">
                                 <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" />
+                              </svg>
+                            ) : appointment.appointmentType === 'Phone Consultation' ? (
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-primary mr-1" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
                               </svg>
                             ) : (
                               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-primary mr-1" viewBox="0 0 20 20" fill="currentColor">
@@ -288,6 +301,32 @@ const UserDashboardPage: React.FC = () => {
     );
   };
 
+  const renderRecordsContent = () => {
+    if (!user) return null;
+    
+    return (
+      <div className="space-y-6">
+        <div>
+          <h3 className="text-lg font-semibold mb-4">Medical Prescriptions</h3>
+          <PrescriptionsList userId={user.id} userRole="user" />
+        </div>
+      </div>
+    );
+  };
+
+  const renderReceiptsContent = () => {
+    if (!user) return null;
+    
+    return (
+      <div className="space-y-6">
+        <div>
+          <h3 className="text-lg font-semibold mb-4">Payment Receipts</h3>
+          <PaymentReceipt userId={user.id} />
+        </div>
+      </div>
+    );
+  };
+
   const renderContent = () => {
     switch (activeTab) {
       case 'appointments':
@@ -295,15 +334,9 @@ const UserDashboardPage: React.FC = () => {
       case 'profile':
         return renderProfileContent();
       case 'records':
-        return (
-          <div className="text-center py-12 bg-muted/50 rounded-lg">
-            <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
-            <h3 className="text-lg font-medium mb-2">Medical Records</h3>
-            <p className="text-muted-foreground mb-4 max-w-md mx-auto">
-              Your medical records will be available here after consultations with our doctors.
-            </p>
-          </div>
-        );
+        return renderRecordsContent();
+      case 'receipts':
+        return renderReceiptsContent();
       case 'settings':
         return (
           <Card>
@@ -410,6 +443,32 @@ const UserDashboardPage: React.FC = () => {
                 </button>
                 <button
                   className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md ${
+                    activeTab === 'receipts'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'hover:bg-muted text-foreground'
+                  }`}
+                  onClick={() => setActiveTab('receipts')}
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="h-4 w-4"
+                  >
+                    <path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1z" />
+                    <path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8" />
+                    <path d="M12 17.5v-11" />
+                  </svg>
+                  Payment Receipts
+                </button>
+                <button
+                  className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md ${
                     activeTab === 'settings'
                       ? 'bg-primary text-primary-foreground'
                       : 'hover:bg-muted text-foreground'
@@ -437,6 +496,7 @@ const UserDashboardPage: React.FC = () => {
               {activeTab === 'appointments' && 'Your Appointments'}
               {activeTab === 'profile' && 'Personal Profile'}
               {activeTab === 'records' && 'Medical Records'}
+              {activeTab === 'receipts' && 'Payment Receipts'}
               {activeTab === 'settings' && 'Account Settings'}
             </h1>
           </div>

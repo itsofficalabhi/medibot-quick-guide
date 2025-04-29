@@ -28,7 +28,7 @@ const DoctorProfilePage: React.FC = () => {
   const [selectedConsultationType, setSelectedConsultationType] = useState<'video' | 'chat' | 'phone' | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   
   // Find doctor by ID
   const doctor = doctors.find(d => d.id === id);
@@ -97,9 +97,24 @@ const DoctorProfilePage: React.FC = () => {
       const message = "Hello, I would like to start a chat consultation.";
       window.open(`https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`, "_blank");
     } else if (selectedConsultationType === 'phone') {
-      // For phone consultation, we'll direct to a phone initiation page
-      // In a real app, you'd use a service like Twilio to initiate the call
+      // For phone consultation, use native phone dialer
       const phoneNumber = doctor?.phone || "+15551234567"; // Default if missing
+      
+      // Save appointment info to localStorage for records
+      const appointmentInfo = {
+        doctorId: id,
+        doctorName: doctor?.name,
+        date: selectedDate,
+        time: selectedTimeSlot,
+        type: 'phone',
+        status: 'confirmed'
+      };
+      
+      const userAppointments = JSON.parse(localStorage.getItem(`appointments_${user?.id}`) || '[]');
+      userAppointments.push(appointmentInfo);
+      localStorage.setItem(`appointments_${user?.id}`, JSON.stringify(userAppointments));
+      
+      // Use the tel: protocol to open the native dialer
       window.location.href = `tel:${phoneNumber}`;
     }
     

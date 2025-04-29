@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
 // Pages
 import HomePage from "./pages/HomePage";
@@ -43,9 +43,16 @@ const App = () => {
                 <Route path="register" element={<RegisterPage />} />
                 <Route path="forgot-password" element={<ForgotPasswordPage />} />
                 
-                {/* Protected routes */}
+                {/* Protected routes with role-based redirection */}
                 <Route path="dashboard" element={
                   <ProtectedRoute>
+                    {/* This will automatically redirect based on user role */}
+                    <Navigate to="/user-dashboard" replace />
+                  </ProtectedRoute>
+                } />
+
+                <Route path="user-dashboard" element={
+                  <ProtectedRoute requiredRole="user">
                     <UserDashboardPage />
                   </ProtectedRoute>
                 } />

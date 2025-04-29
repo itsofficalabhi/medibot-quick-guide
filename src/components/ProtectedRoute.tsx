@@ -30,7 +30,16 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredRole 
     if (user?.role === 'doctor') {
       return <Navigate to="/doctor-dashboard" replace />;
     } else {
-      return <Navigate to="/dashboard" replace />;
+      return <Navigate to="/user-dashboard" replace />;
+    }
+  }
+
+  // Redirect to the specific dashboard if user is at /dashboard
+  if (location.pathname === '/dashboard') {
+    if (user?.role === 'doctor') {
+      return <Navigate to="/doctor-dashboard" replace />;
+    } else {
+      return <Navigate to="/user-dashboard" replace />;
     }
   }
 

@@ -34,6 +34,34 @@ const testAccounts = {
       password: 'doctor123',
       name: 'Dr. Michael Chen',
       role: 'doctor' as const
+    },
+    {
+      id: 'doc3',
+      email: 'doctor3@test.com',
+      password: 'doctor123',
+      name: 'Dr. Amanda Rodriguez',
+      role: 'doctor' as const
+    },
+    {
+      id: 'doc4',
+      email: 'doctor4@test.com',
+      password: 'doctor123',
+      name: 'Dr. James Wilson',
+      role: 'doctor' as const
+    },
+    {
+      id: 'doc5',
+      email: 'doctor5@test.com',
+      password: 'doctor123',
+      name: 'Dr. Emily Patel',
+      role: 'doctor' as const
+    },
+    {
+      id: 'doc6',
+      email: 'doctor6@test.com',
+      password: 'doctor123',
+      name: 'Dr. Robert Lee',
+      role: 'doctor' as const
     }
   ],
   users: [
@@ -49,6 +77,97 @@ const testAccounts = {
       email: 'patient2@test.com',
       password: 'patient123',
       name: 'Jane Doe',
+      role: 'user' as const
+    },
+    {
+      id: 'user3',
+      email: 'patient3@test.com',
+      password: 'patient123',
+      name: 'Michael Brown',
+      role: 'user' as const
+    },
+    {
+      id: 'user4',
+      email: 'patient4@test.com',
+      password: 'patient123',
+      name: 'Emma Wilson',
+      role: 'user' as const
+    },
+    {
+      id: 'user5',
+      email: 'patient5@test.com',
+      password: 'patient123',
+      name: 'David Miller',
+      role: 'user' as const
+    },
+    {
+      id: 'user6',
+      email: 'patient6@test.com',
+      password: 'patient123',
+      name: 'Sarah Garcia',
+      role: 'user' as const
+    },
+    {
+      id: 'user7',
+      email: 'patient7@test.com',
+      password: 'patient123',
+      name: 'Robert Taylor',
+      role: 'user' as const
+    },
+    {
+      id: 'user8',
+      email: 'patient8@test.com',
+      password: 'patient123',
+      name: 'Jennifer Martinez',
+      role: 'user' as const
+    },
+    {
+      id: 'user9',
+      email: 'patient9@test.com',
+      password: 'patient123',
+      name: 'Thomas Anderson',
+      role: 'user' as const
+    },
+    {
+      id: 'user10',
+      email: 'patient10@test.com',
+      password: 'patient123',
+      name: 'Lisa Johnson',
+      role: 'user' as const
+    },
+    {
+      id: 'user11',
+      email: 'patient11@test.com',
+      password: 'patient123',
+      name: 'James Wilson',
+      role: 'user' as const
+    },
+    {
+      id: 'user12',
+      email: 'patient12@test.com',
+      password: 'patient123',
+      name: 'Patricia Moore',
+      role: 'user' as const
+    },
+    {
+      id: 'user13',
+      email: 'patient13@test.com',
+      password: 'patient123',
+      name: 'Richard Taylor',
+      role: 'user' as const
+    },
+    {
+      id: 'user14',
+      email: 'patient14@test.com',
+      password: 'patient123',
+      name: 'Linda Rodriguez',
+      role: 'user' as const
+    },
+    {
+      id: 'user15',
+      email: 'patient15@test.com',
+      password: 'patient123',
+      name: 'William Jackson',
       role: 'user' as const
     }
   ]

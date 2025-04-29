@@ -1,10 +1,11 @@
 
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/components/ui/use-toast';
 
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -13,6 +14,11 @@ const LoginPage: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState('');
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const { toast } = useToast();
+  
+  // Get the intended destination from location state, or default to dashboard
+  const from = (location.state as { from?: string })?.from || '/dashboard';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,7 +29,14 @@ const LoginPage: React.FC = () => {
       const success = await login(email, password);
       
       if (success) {
-        navigate('/dashboard');
+        // Redirect to dashboard - the ProtectedRoute component will handle role-specific redirection
+        navigate(from);
+        
+        // Show success toast
+        toast({
+          title: "Login Successful",
+          description: "You have successfully logged in",
+        });
       } else {
         setErrorMessage('Invalid email or password');
       }
@@ -34,6 +47,32 @@ const LoginPage: React.FC = () => {
       setIsLoading(false);
     }
   };
+
+  // Create account information UI for demo purposes
+  const DemoAccounts = () => (
+    <div className="mt-6 border-t pt-4">
+      <h3 className="text-sm font-medium mb-2">Demo Accounts</h3>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <h4 className="text-xs font-semibold text-primary">Doctor Accounts</h4>
+          <div className="text-xs text-muted-foreground">
+            <p>Email: doctor1@test.com</p>
+            <p>Password: doctor123</p>
+          </div>
+        </div>
+        <div>
+          <h4 className="text-xs font-semibold text-primary">Patient Accounts</h4>
+          <div className="text-xs text-muted-foreground">
+            <p>Email: patient1@test.com</p>
+            <p>Password: patient123</p>
+          </div>
+        </div>
+      </div>
+      <p className="text-xs text-muted-foreground mt-2">
+        Additional accounts (doctor1-6@test.com, patient1-15@test.com) with same passwords are available.
+      </p>
+    </div>
+  );
 
   return (
     <div className="container max-w-md mx-auto px-4 py-16">
@@ -86,6 +125,8 @@ const LoginPage: React.FC = () => {
               {isLoading ? 'Logging in...' : 'Log in'}
             </Button>
           </form>
+          
+          <DemoAccounts />
         </CardContent>
         <CardFooter className="flex justify-center">
           <p className="text-sm text-muted-foreground">

@@ -4,18 +4,23 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { Separator } from '@/components/ui/separator';
-import { Calendar, User, DollarSign, Video, Clock, CheckCircle } from 'lucide-react';
+import { Calendar, User, DollarSign, Video, Clock, CheckCircle, FileText } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import PrescriptionForm from '@/components/PrescriptionForm';
+import PrescriptionsList from '@/components/PrescriptionsList';
 
 const DoctorDashboardPage: React.FC = () => {
   const { user, logout } = useAuth();
-  const [activeTab, setActiveTab] = useState<'appointments' | 'patients' | 'earnings' | 'settings'>('appointments');
+  const [activeTab, setActiveTab] = useState<'appointments' | 'patients' | 'earnings' | 'prescriptions' | 'settings'>('appointments');
+  const [showPrescriptionForm, setShowPrescriptionForm] = useState(false);
+  const [selectedPatient, setSelectedPatient] = useState<{id: string; name: string; appointmentId: number} | null>(null);
 
   // Mock data for appointments
   const upcomingAppointments = [
     {
       id: 1,
       patientName: 'John Smith',
+      patientId: 'user1',
       appointmentType: 'Video Consultation',
       date: '2025-05-10',
       time: '10:30 AM',
@@ -24,6 +29,7 @@ const DoctorDashboardPage: React.FC = () => {
     {
       id: 2,
       patientName: 'Jane Doe',
+      patientId: 'user2',
       appointmentType: 'Video Consultation',
       date: '2025-05-15',
       time: '2:00 PM',
@@ -35,6 +41,7 @@ const DoctorDashboardPage: React.FC = () => {
     {
       id: 3,
       patientName: 'Robert Johnson',
+      patientId: 'user3',
       appointmentType: 'Chat Consultation',
       date: '2025-04-20',
       time: '11:00 AM',
@@ -43,6 +50,7 @@ const DoctorDashboardPage: React.FC = () => {
     {
       id: 4,
       patientName: 'Maria Garcia',
+      patientId: 'user4',
       appointmentType: 'Video Consultation',
       date: '2025-04-15',
       time: '3:30 PM',
@@ -53,27 +61,61 @@ const DoctorDashboardPage: React.FC = () => {
   // Mock data for patients
   const patients = [
     {
-      id: 1,
+      id: 'user1',
       name: 'John Smith',
       age: 45,
       lastVisit: '2025-05-01',
       condition: 'Hypertension'
     },
     {
-      id: 2,
+      id: 'user2',
       name: 'Jane Doe',
       age: 32,
       lastVisit: '2025-04-28',
       condition: 'Diabetes'
     },
     {
-      id: 3,
+      id: 'user3',
       name: 'Robert Johnson',
       age: 57,
       lastVisit: '2025-04-15',
       condition: 'Arthritis'
+    },
+    {
+      id: 'user4',
+      name: 'Maria Garcia',
+      age: 29,
+      lastVisit: '2025-04-10',
+      condition: 'Migraine'
+    },
+    {
+      id: 'user5',
+      name: 'David Miller',
+      age: 41,
+      lastVisit: '2025-04-05',
+      condition: 'Asthma'
     }
   ];
+
+  // Calculate earnings based on mock data
+  const calculateEarnings = () => {
+    // In a real app, this would come from a database
+    // For demo purposes, we'll use 10 completed consultations at $100 each
+    const completedAppointments = 10;
+    const ratePerConsultation = 100;
+    return completedAppointments * ratePerConsultation;
+  };
+
+  const totalEarnings = calculateEarnings();
+
+  const handleWritePrescription = (patient: {id: string; name: string}, appointmentId: number) => {
+    setSelectedPatient({
+      id: patient.id,
+      name: patient.name,
+      appointmentId
+    });
+    setShowPrescriptionForm(true);
+  };
 
   const renderAppointmentContent = () => {
     return (
@@ -98,6 +140,10 @@ const DoctorDashboardPage: React.FC = () => {
                           <div className="flex items-center">
                             {appointment.appointmentType === 'Video Consultation' ? (
                               <Video className="h-4 w-4 text-primary mr-1" />
+                            ) : appointment.appointmentType === 'Phone Consultation' ? (
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-primary mr-1" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
+                              </svg>
                             ) : (
                               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-primary mr-1" viewBox="0 0 20 20" fill="currentColor">
                                 <path fillRule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clipRule="evenodd" />
@@ -168,7 +214,15 @@ const DoctorDashboardPage: React.FC = () => {
                           <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
                           <span className="capitalize">Completed</span>
                         </div>
-                        <Button size="sm" variant="outline" className="ml-4">View Notes</Button>
+                        <div className="flex space-x-2">
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => handleWritePrescription({id: appointment.patientId, name: appointment.patientName}, appointment.id)}
+                          >
+                            Write Prescription
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   </CardContent>
@@ -216,7 +270,13 @@ const DoctorDashboardPage: React.FC = () => {
                       <td className="py-3 px-4">{patient.condition}</td>
                       <td className="py-3 px-4">
                         <div className="flex gap-2">
-                          <Button size="sm" variant="outline">View Records</Button>
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => handleWritePrescription({id: patient.id, name: patient.name}, 0)}
+                          >
+                            Prescribe
+                          </Button>
                           <Button size="sm">Message</Button>
                         </div>
                       </td>
@@ -232,25 +292,103 @@ const DoctorDashboardPage: React.FC = () => {
   };
 
   const renderEarningsContent = () => {
+    // Monthly data for the graph
+    const monthlyData = [
+      { month: 'Jan', earnings: 2800 },
+      { month: 'Feb', earnings: 3200 },
+      { month: 'Mar', earnings: 2900 },
+      { month: 'Apr', earnings: 3450 },
+      { month: 'May', earnings: 0 }, // Current month (projected)
+      { month: 'Jun', earnings: 0 }, // Future month
+    ];
+
+    // Recent payments data
+    const recentPayments = [
+      { id: 'pay1', patient: 'John Smith', amount: 100, date: '2025-04-28', type: 'Video Consultation' },
+      { id: 'pay2', patient: 'Jane Doe', amount: 100, date: '2025-04-25', type: 'Video Consultation' },
+      { id: 'pay3', patient: 'Robert Johnson', amount: 80, date: '2025-04-20', type: 'Chat Consultation' },
+      { id: 'pay4', patient: 'Maria Garcia', amount: 100, date: '2025-04-15', type: 'Video Consultation' },
+      { id: 'pay5', patient: 'David Miller', amount: 70, date: '2025-04-10', type: 'Phone Consultation' },
+    ];
+
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm text-muted-foreground">Total Earnings</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">${totalEarnings}</div>
+              <p className="text-xs text-muted-foreground">All time earnings</p>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm text-muted-foreground">Monthly Average</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">$3,087</div>
+              <p className="text-xs text-muted-foreground">Last 4 months</p>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm text-muted-foreground">Consultations</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">43</div>
+              <p className="text-xs text-muted-foreground">Total consultations</p>
+            </CardContent>
+          </Card>
+        </div>
+        
         <Card>
           <CardHeader>
             <CardTitle>Monthly Earnings</CardTitle>
-            <CardDescription>Your earnings for the current month</CardDescription>
+            <CardDescription>Your earnings by month</CardDescription>
           </CardHeader>
-          <CardContent className="pt-4">
-            <div className="text-3xl font-bold">$3,450</div>
-            <p className="text-sm text-muted-foreground mt-1">From 23 consultations</p>
-            <div className="mt-4">
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-sm">Target</span>
-                <span className="text-sm font-medium">$5,000</span>
-              </div>
-              <div className="w-full bg-muted rounded-full h-2">
-                <div className="bg-primary h-2 rounded-full" style={{ width: '69%' }}></div>
-              </div>
-              <p className="text-xs text-muted-foreground mt-2">69% of monthly target reached</p>
+          <CardContent>
+            <div className="h-[200px] flex items-end space-x-2">
+              {monthlyData.map((data) => (
+                <div key={data.month} className="flex-1 flex flex-col items-center">
+                  <div 
+                    className="w-full bg-primary/90 rounded-t-md" 
+                    style={{ 
+                      height: data.earnings > 0 ? `${(data.earnings / 4000) * 180}px` : '0px',
+                      minHeight: data.earnings > 0 ? '20px' : '0px'
+                    }}
+                  ></div>
+                  <div className="mt-2 text-xs">{data.month}</div>
+                  <div className="text-xs text-muted-foreground">
+                    {data.earnings > 0 ? `$${data.earnings}` : ''}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Payments</CardTitle>
+            <CardDescription>Your latest earnings</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {recentPayments.map((payment) => (
+                <div key={payment.id} className="flex justify-between items-center p-3 border rounded-md">
+                  <div>
+                    <div className="font-medium">{payment.patient}</div>
+                    <div className="text-sm text-muted-foreground flex items-center">
+                      {payment.type} · {payment.date}
+                    </div>
+                  </div>
+                  <div className="text-lg font-semibold">${payment.amount}</div>
+                </div>
+              ))}
             </div>
           </CardContent>
         </Card>
@@ -292,6 +430,40 @@ const DoctorDashboardPage: React.FC = () => {
     );
   };
 
+  const renderPrescriptionsContent = () => {
+    if (!user) return null;
+    
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <h3 className="text-lg font-semibold">Prescriptions History</h3>
+          <Button onClick={() => setShowPrescriptionForm(true)}>Create New Prescription</Button>
+        </div>
+        
+        {showPrescriptionForm && selectedPatient ? (
+          <PrescriptionForm
+            patientName={selectedPatient.name}
+            patientId={selectedPatient.id}
+            appointmentId={selectedPatient.appointmentId}
+            onComplete={() => {
+              setShowPrescriptionForm(false);
+              setSelectedPatient(null);
+            }}
+          />
+        ) : showPrescriptionForm ? (
+          <PrescriptionForm
+            patientName="New Patient"
+            patientId="new"
+            appointmentId={0}
+            onComplete={() => setShowPrescriptionForm(false)}
+          />
+        ) : (
+          <PrescriptionsList userId={user.id} userRole="doctor" />
+        )}
+      </div>
+    );
+  };
+
   const renderContent = () => {
     switch (activeTab) {
       case 'appointments':
@@ -300,6 +472,8 @@ const DoctorDashboardPage: React.FC = () => {
         return renderPatientsContent();
       case 'earnings':
         return renderEarningsContent();
+      case 'prescriptions':
+        return renderPrescriptionsContent();  
       case 'settings':
         return (
           <Card>
@@ -402,6 +576,17 @@ const DoctorDashboardPage: React.FC = () => {
                 </button>
                 <button
                   className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md ${
+                    activeTab === 'prescriptions'
+                      ? 'bg-[#8B5CF6] text-white'
+                      : 'hover:bg-white/10 text-white'
+                  }`}
+                  onClick={() => setActiveTab('prescriptions')}
+                >
+                  <FileText className="h-4 w-4" />
+                  Prescriptions
+                </button>
+                <button
+                  className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md ${
                     activeTab === 'earnings'
                       ? 'bg-[#8B5CF6] text-white'
                       : 'hover:bg-white/10 text-white'
@@ -442,6 +627,7 @@ const DoctorDashboardPage: React.FC = () => {
             <h1 className="text-2xl font-bold">
               {activeTab === 'appointments' && 'Appointments'}
               {activeTab === 'patients' && 'Patient Management'}
+              {activeTab === 'prescriptions' && 'Prescriptions Management'}
               {activeTab === 'earnings' && 'Earnings & Payments'}
               {activeTab === 'settings' && 'Account Settings'}
             </h1>

@@ -30,7 +30,7 @@ const RegisterPage: React.FC = () => {
     setErrorMessage('');
 
     try {
-      const success = await register(name, email, password);
+      const success = await register(name, email, password, mobile);
       
       if (success) {
         navigate('/dashboard');
@@ -110,6 +110,7 @@ const RegisterPage: React.FC = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                minLength={6}
               />
             </div>
             <div>
@@ -123,6 +124,7 @@ const RegisterPage: React.FC = () => {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
+                minLength={6}
               />
             </div>
             <div className="text-xs text-muted-foreground">

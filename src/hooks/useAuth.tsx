@@ -14,8 +14,9 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  token: string | null;
   login: (email: string, password: string) => Promise<boolean>;
-  register: (name: string, email: string, password: string) => Promise<boolean>;
+  register: (name: string, email: string, password: string, mobile?: string) => Promise<boolean>;
   logout: () => void;
   forgotPassword: (email: string) => Promise<boolean>;
 }
@@ -176,25 +177,31 @@ const testAccounts = {
 };
 
 const AUTH_STORAGE_KEY = 'mediclinic_user';
+const TOKEN_STORAGE_KEY = 'mediclinic_token';
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   useEffect(() => {
     const checkAuth = async () => {
       try {
         const storedUser = localStorage.getItem(AUTH_STORAGE_KEY);
-        if (storedUser) {
+        const storedToken = localStorage.getItem(TOKEN_STORAGE_KEY);
+        
+        if (storedUser && storedToken) {
           const parsedUser = JSON.parse(storedUser);
           setUser(parsedUser);
+          setToken(storedToken);
         }
       } catch (error) {
         console.error('Error checking authentication:', error);
         // Clear potentially corrupted data
         localStorage.removeItem(AUTH_STORAGE_KEY);
+        localStorage.removeItem(TOKEN_STORAGE_KEY);
       } finally {
         setIsLoading(false);
       }
@@ -208,7 +215,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // Try to authenticate with the API
       const response = await authAPI.login(email, password);
       
-      if (response.data && response.data.user) {
+      if (response.data && response.data.user && response.data.token) {
         const userInfo = {
           id: response.data.user.id,
           name: response.data.user.name,
@@ -217,7 +224,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         };
         
         setUser(userInfo);
+        setToken(response.data.token);
         localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(userInfo));
+        localStorage.setItem(TOKEN_STORAGE_KEY, response.data.token);
+        
         toast({
           title: "Login Successful",
           description: "Welcome back to MediClinic!"
@@ -246,7 +256,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (account) {
         const { password: _, ...userInfo } = account;
         setUser(userInfo);
+        // Generate a mock token for demo purposes
+        const mockToken = `mock_token_${Date.now()}`;
+        setToken(mockToken);
         localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(userInfo));
+        localStorage.setItem(TOKEN_STORAGE_KEY, mockToken);
+        
         toast({
           title: "Login Successful (Demo Mode)",
           description: "Using mock data since API connection failed."
@@ -258,12 +273,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const register = async (name: string, email: string, password: string) => {
+  const register = async (name: string, email: string, password: string, mobile?: string) => {
     try {
       // Try to register with the API
-      const response = await authAPI.register(name, email, password);
+      const response = await authAPI.register(name, email, password, 'user', mobile);
       
-      if (response.data && response.data.user) {
+      if (response.data && response.data.user && response.data.token) {
         const userInfo = {
           id: response.data.user.id,
           name: response.data.user.name,
@@ -272,7 +287,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         };
         
         setUser(userInfo);
+        setToken(response.data.token);
         localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(userInfo));
+        localStorage.setItem(TOKEN_STORAGE_KEY, response.data.token);
+        
         toast({
           title: "Registration Successful",
           description: "Welcome to MediClinic!"
@@ -294,7 +312,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       };
       
       setUser(newUser);
+      // Generate a mock token for demo purposes
+      const mockToken = `mock_token_${Date.now()}`;
+      setToken(mockToken);
       localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(newUser));
+      localStorage.setItem(TOKEN_STORAGE_KEY, mockToken);
       
       toast({
         title: "Registration Successful (Demo Mode)",
@@ -306,7 +328,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const logout = () => {
     setUser(null);
+    setToken(null);
     localStorage.removeItem(AUTH_STORAGE_KEY);
+    localStorage.removeItem(TOKEN_STORAGE_KEY);
   };
 
   const forgotPassword = async (email: string) => {
@@ -319,6 +343,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     user,
     isAuthenticated: !!user,
     isLoading,
+    token,
     login,
     register,
     logout,

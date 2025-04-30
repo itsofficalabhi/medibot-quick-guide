@@ -2,6 +2,16 @@
 const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
+const jwt = require('jsonwebtoken');
+
+// Generate JWT Token
+const generateToken = (user) => {
+  return jwt.sign(
+    { id: user._id, role: user.role },
+    process.env.JWT_SECRET || 'mediclinic_jwt_secret',
+    { expiresIn: '30d' }
+  );
+};
 
 // Register a new user
 router.post('/register', async (req, res) => {
@@ -18,12 +28,15 @@ router.post('/register', async (req, res) => {
     user = new User({
       name,
       email,
-      password, // In production, hash this password
+      password,
       role,
       mobile
     });
     
     await user.save();
+    
+    // Generate token
+    const token = generateToken(user);
     
     res.status(201).json({ 
       message: 'User created successfully',
@@ -32,7 +45,8 @@ router.post('/register', async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role
-      }
+      },
+      token
     });
   } catch (error) {
     console.error(error);
@@ -51,10 +65,14 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
     
-    // Check password (in production, compare hashed passwords)
-    if (password !== user.password) {
+    // Check password
+    const isMatch = await user.comparePassword(password);
+    if (!isMatch) {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
+    
+    // Generate token
+    const token = generateToken(user);
     
     res.json({
       message: 'Login successful',
@@ -63,7 +81,8 @@ router.post('/login', async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role
-      }
+      },
+      token
     });
   } catch (error) {
     console.error(error);

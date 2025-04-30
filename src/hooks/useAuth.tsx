@@ -1,5 +1,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { authAPI } from '@/services/api';
+import { toast } from '@/components/ui/use-toast';
 
 interface User {
   id: string;
@@ -18,7 +20,7 @@ interface AuthContextType {
   forgotPassword: (email: string) => Promise<boolean>;
 }
 
-// Test accounts data
+// Test accounts data (used as fallback when API is not available)
 const testAccounts = {
   doctors: [
     {
@@ -203,6 +205,33 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const login = async (email: string, password: string) => {
     try {
+      // Try to authenticate with the API
+      const response = await authAPI.login(email, password);
+      
+      if (response.data && response.data.user) {
+        const userInfo = {
+          id: response.data.user.id,
+          name: response.data.user.name,
+          email: response.data.user.email,
+          role: response.data.user.role
+        };
+        
+        setUser(userInfo);
+        localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(userInfo));
+        toast({
+          title: "Login Successful",
+          description: "Welcome back to MediClinic!"
+        });
+        return true;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('Login error:', error);
+      
+      // Fallback to mock data if API fails
+      console.log("API failed, falling back to test accounts...");
+      
       // Check against test accounts
       const doctorAccount = testAccounts.doctors.find(
         doc => doc.email === email && doc.password === password
@@ -218,18 +247,44 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const { password: _, ...userInfo } = account;
         setUser(userInfo);
         localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(userInfo));
+        toast({
+          title: "Login Successful (Demo Mode)",
+          description: "Using mock data since API connection failed."
+        });
         return true;
       }
       
-      return false;
-    } catch (error) {
-      console.error('Login error:', error);
       return false;
     }
   };
 
   const register = async (name: string, email: string, password: string) => {
     try {
+      // Try to register with the API
+      const response = await authAPI.register(name, email, password);
+      
+      if (response.data && response.data.user) {
+        const userInfo = {
+          id: response.data.user.id,
+          name: response.data.user.name,
+          email: response.data.user.email,
+          role: response.data.user.role
+        };
+        
+        setUser(userInfo);
+        localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(userInfo));
+        toast({
+          title: "Registration Successful",
+          description: "Welcome to MediClinic!"
+        });
+        return true;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('Registration error:', error);
+      
+      // Fallback for demo
       // For demo, create a new user account
       const newUser = {
         id: `user${Date.now()}`,
@@ -240,10 +295,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       setUser(newUser);
       localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(newUser));
+      
+      toast({
+        title: "Registration Successful (Demo Mode)",
+        description: "Using mock data since API connection failed."
+      });
       return true;
-    } catch (error) {
-      console.error('Registration error:', error);
-      return false;
     }
   };
 

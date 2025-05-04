@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -52,7 +53,7 @@ const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* Services Section - Now with Slider */}
+      {/* Services Section - Now with Marquee Slider */}
       <section className="py-16 md:py-24">
         <div className="container mx-auto px-4 md:px-6">
           <div className="text-center mb-12">
@@ -64,11 +65,12 @@ const HomePage: React.FC = () => {
           
           <Carousel
             opts={{ align: "start", loop: true }}
+            marquee={true}
             className="w-full mx-auto"
           >
             <CarouselContent>
               {/* Video Consultations */}
-              <CarouselItem className="basis-full md:basis-1/2 lg:basis-1/3 pl-4">
+              <CarouselItem className="basis-full md:basis-1/3 lg:basis-1/4 pl-4">
                 <Card className="border border-border shadow-sm hover:shadow-md transition-all duration-200 h-full">
                   <CardContent className="pt-6">
                     <div className="flex flex-col items-center text-center h-full">
@@ -85,7 +87,7 @@ const HomePage: React.FC = () => {
               </CarouselItem>
               
               {/* Chat Consultations */}
-              <CarouselItem className="basis-full md:basis-1/2 lg:basis-1/3 pl-4">
+              <CarouselItem className="basis-full md:basis-1/3 lg:basis-1/4 pl-4">
                 <Card className="border border-border shadow-sm hover:shadow-md transition-all duration-200 h-full">
                   <CardContent className="pt-6">
                     <div className="flex flex-col items-center text-center h-full">
@@ -102,7 +104,7 @@ const HomePage: React.FC = () => {
               </CarouselItem>
               
               {/* Easy Scheduling */}
-              <CarouselItem className="basis-full md:basis-1/2 lg:basis-1/3 pl-4">
+              <CarouselItem className="basis-full md:basis-1/3 lg:basis-1/4 pl-4">
                 <Card className="border border-border shadow-sm hover:shadow-md transition-all duration-200 h-full">
                   <CardContent className="pt-6">
                     <div className="flex flex-col items-center text-center h-full">
@@ -119,7 +121,7 @@ const HomePage: React.FC = () => {
               </CarouselItem>
 
               {/* Additional Services */}
-              <CarouselItem className="basis-full md:basis-1/2 lg:basis-1/3 pl-4">
+              <CarouselItem className="basis-full md:basis-1/3 lg:basis-1/4 pl-4">
                 <Card className="border border-border shadow-sm hover:shadow-md transition-all duration-200 h-full">
                   <CardContent className="pt-6">
                     <div className="flex flex-col items-center text-center h-full">
@@ -134,11 +136,40 @@ const HomePage: React.FC = () => {
                   </CardContent>
                 </Card>
               </CarouselItem>
+              
+              {/* Duplicate cards to create continuous effect */}
+              <CarouselItem className="basis-full md:basis-1/3 lg:basis-1/4 pl-4">
+                <Card className="border border-border shadow-sm hover:shadow-md transition-all duration-200 h-full">
+                  <CardContent className="pt-6">
+                    <div className="flex flex-col items-center text-center h-full">
+                      <div className="p-3 bg-primary/10 rounded-full mb-4">
+                        <Video className="h-8 w-8 text-primary" />
+                      </div>
+                      <h3 className="text-xl font-semibold mb-2">Video Consultations</h3>
+                      <p className="text-muted-foreground">
+                        Connect with doctors face-to-face through secure video calls.
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </CarouselItem>
+              
+              <CarouselItem className="basis-full md:basis-1/3 lg:basis-1/4 pl-4">
+                <Card className="border border-border shadow-sm hover:shadow-md transition-all duration-200 h-full">
+                  <CardContent className="pt-6">
+                    <div className="flex flex-col items-center text-center h-full">
+                      <div className="p-3 bg-primary/10 rounded-full mb-4">
+                        <MessageSquare className="h-8 w-8 text-primary" />
+                      </div>
+                      <h3 className="text-xl font-semibold mb-2">Chat Consultations</h3>
+                      <p className="text-muted-foreground">
+                        Message doctors directly for non-urgent medical advice.
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </CarouselItem>
             </CarouselContent>
-            <div className="flex items-center justify-center mt-8 gap-2">
-              <CarouselPrevious className="static" />
-              <CarouselNext className="static" />
-            </div>
           </Carousel>
         </div>
       </section>
@@ -221,7 +252,7 @@ const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* Testimonials Section - Now with Slider */}
+      {/* Testimonials Section - Now with Marquee Slider */}
       <section className="py-16 md:py-24">
         <div className="container mx-auto px-4 md:px-6">
           <div className="text-center mb-12">
@@ -232,13 +263,14 @@ const HomePage: React.FC = () => {
           </div>
           
           <Carousel
-            opts={{ align: "center", loop: true }}
+            opts={{ align: "start", loop: true }}
+            marquee={true}
             className="w-full"
           >
             <CarouselContent>
-              {[1, 2, 3, 4, 5].map((i) => (
-                <CarouselItem key={i} className="basis-full md:basis-1/2 lg:basis-1/3 pl-4">
-                  <Card key={i} className="border border-border h-full">
+              {[1, 2, 3, 4, 5, 1, 2, 3].map((i, index) => (
+                <CarouselItem key={`testimonial-${i}-${index}`} className="basis-full md:basis-1/2 lg:basis-1/3 pl-4">
+                  <Card className="border border-border h-full">
                     <CardContent className="pt-6">
                       <div className="flex flex-col space-y-4">
                         <div className="flex items-center space-x-1">
@@ -279,13 +311,9 @@ const HomePage: React.FC = () => {
                 </CarouselItem>
               ))}
             </CarouselContent>
-            <div className="flex items-center justify-center mt-8 gap-2">
-              <CarouselPrevious className="static" />
-              <CarouselNext className="static" />
-            </div>
           </Carousel>
           
-          {/* Patient Satisfaction Slider */}
+          {/* Patient Satisfaction Slider - Now Animated */}
           <div className="max-w-md mx-auto mt-12 text-center">
             <h3 className="font-medium mb-4">Patient Satisfaction</h3>
             <Slider
@@ -293,6 +321,7 @@ const HomePage: React.FC = () => {
               max={100}
               step={1}
               disabled
+              animated={true}
               className="w-full"
             />
             <p className="mt-2 text-sm text-muted-foreground">96% of our patients are satisfied with our services</p>

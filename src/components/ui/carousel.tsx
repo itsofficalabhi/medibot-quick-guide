@@ -1,3 +1,4 @@
+
 import * as React from "react"
 import useEmblaCarousel, {
   type UseEmblaCarouselType,
@@ -17,6 +18,10 @@ type CarouselProps = {
   plugins?: CarouselPlugin
   orientation?: "horizontal" | "vertical"
   setApi?: (api: CarouselApi) => void
+  autoplay?: boolean
+  autoplayInterval?: number
+  marquee?: boolean
+  marqueeSpeed?: number
 }
 
 type CarouselContextProps = {
@@ -26,6 +31,8 @@ type CarouselContextProps = {
   scrollNext: () => void
   canScrollPrev: boolean
   canScrollNext: boolean
+  autoplay: boolean
+  marquee: boolean
 } & CarouselProps
 
 const CarouselContext = React.createContext<CarouselContextProps | null>(null)
@@ -52,17 +59,23 @@ const Carousel = React.forwardRef<
       plugins,
       className,
       children,
+      autoplay = false,
+      autoplayInterval = 3000,
+      marquee = false,
+      marqueeSpeed = 20,
       ...props
     },
     ref
   ) => {
-    const [carouselRef, api] = useEmblaCarousel(
-      {
-        ...opts,
-        axis: orientation === "horizontal" ? "x" : "y",
-      },
-      plugins
-    )
+    const options = {
+      ...opts,
+      axis: orientation === "horizontal" ? "x" : "y",
+      loop: marquee || opts?.loop,
+      draggable: !marquee,
+      dragFree: marquee
+    }
+
+    const [carouselRef, api] = useEmblaCarousel(options, plugins)
     const [canScrollPrev, setCanScrollPrev] = React.useState(false)
     const [canScrollNext, setCanScrollNext] = React.useState(false)
 
@@ -82,6 +95,41 @@ const Carousel = React.forwardRef<
     const scrollNext = React.useCallback(() => {
       api?.scrollNext()
     }, [api])
+
+    // Autoplay functionality
+    React.useEffect(() => {
+      if (!api || !autoplay) return
+
+      const intervalId = setInterval(() => {
+        api.scrollNext()
+      }, autoplayInterval)
+
+      return () => clearInterval(intervalId)
+    }, [api, autoplay, autoplayInterval])
+
+    // Marquee effect
+    React.useEffect(() => {
+      if (!api || !marquee) return
+
+      let animationFrame: number
+      const scroll = () => {
+        api.scrollNext({ behavior: "auto" })
+        animationFrame = requestAnimationFrame(scroll)
+      }
+
+      const startMarquee = () => {
+        animationFrame = requestAnimationFrame(scroll)
+      }
+
+      api.on("init", startMarquee)
+      api.on("reInit", startMarquee)
+
+      return () => {
+        api.off("init", startMarquee)
+        api.off("reInit", startMarquee)
+        cancelAnimationFrame(animationFrame)
+      }
+    }, [api, marquee, marqueeSpeed])
 
     const handleKeyDown = React.useCallback(
       (event: React.KeyboardEvent<HTMLDivElement>) => {
@@ -123,13 +171,15 @@ const Carousel = React.forwardRef<
         value={{
           carouselRef,
           api: api,
-          opts,
+          opts: options,
           orientation:
             orientation || (opts?.axis === "y" ? "vertical" : "horizontal"),
           scrollPrev,
           scrollNext,
           canScrollPrev,
           canScrollNext,
+          autoplay,
+          marquee
         }}
       >
         <div
@@ -196,7 +246,9 @@ const CarouselPrevious = React.forwardRef<
   HTMLButtonElement,
   React.ComponentProps<typeof Button>
 >(({ className, variant = "outline", size = "icon", ...props }, ref) => {
-  const { orientation, scrollPrev, canScrollPrev } = useCarousel()
+  const { orientation, scrollPrev, canScrollPrev, marquee } = useCarousel()
+  
+  if (marquee) return null;
 
   return (
     <Button
@@ -225,7 +277,9 @@ const CarouselNext = React.forwardRef<
   HTMLButtonElement,
   React.ComponentProps<typeof Button>
 >(({ className, variant = "outline", size = "icon", ...props }, ref) => {
-  const { orientation, scrollNext, canScrollNext } = useCarousel()
+  const { orientation, scrollNext, canScrollNext, marquee } = useCarousel()
+  
+  if (marquee) return null;
 
   return (
     <Button

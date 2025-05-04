@@ -6,6 +6,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import ChatMessage, { MessageType } from './ChatMessage';
 import { getResponseWithDelay } from '@/utils/chatUtils';
 import DisclaimerBanner from './DisclaimerBanner';
+import { Bot } from 'lucide-react';
 
 interface Message {
   id: number;
@@ -18,7 +19,7 @@ const ChatInterface: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 1,
-      content: "Hello! I'm MediBot, a health information assistant. I can answer general health questions. How can I help you today?",
+      content: "Hello! I'm MediBot, an AI health assistant. I can answer questions about health topics and provide general information. How can I help you today?",
       type: 'bot',
       timestamp: new Date()
     }
@@ -74,24 +75,13 @@ const ChatInterface: React.FC = () => {
     <Card className="w-full max-w-3xl mx-auto">
       <CardHeader className="bg-primary text-white">
         <CardTitle className="flex items-center">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="h-6 w-6 mr-2"
-          >
-            <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
-          </svg>
-          MediBot - Health FAQ Assistant
+          <Bot className="h-6 w-6 mr-2" />
+          MediBot - AI Health Assistant
         </CardTitle>
       </CardHeader>
       <CardContent className="p-4">
         <DisclaimerBanner />
-        <div className="chat-container overflow-y-auto p-2">
+        <div className="chat-container h-[400px] overflow-y-auto p-2 mb-2 border rounded-md">
           {messages.map(message => (
             <ChatMessage
               key={message.id}
@@ -127,6 +117,7 @@ const ChatInterface: React.FC = () => {
           <Button 
             onClick={handleSendMessage} 
             disabled={isTyping || inputValue.trim() === ''}
+            className="bg-primary hover:bg-primary/90"
           >
             Send
           </Button>

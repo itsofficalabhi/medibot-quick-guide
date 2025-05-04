@@ -1,4 +1,3 @@
-
 import * as React from "react"
 import useEmblaCarousel, {
   type UseEmblaCarouselType,
@@ -22,6 +21,7 @@ type CarouselProps = {
   autoplayInterval?: number
   marquee?: boolean
   marqueeSpeed?: number
+  pauseBetweenSlides?: number // New prop for pause duration
 }
 
 type CarouselContextProps = {
@@ -33,6 +33,7 @@ type CarouselContextProps = {
   canScrollNext: boolean
   autoplay: boolean
   marquee: boolean
+  pauseBetweenSlides: number // Add to context
 } & CarouselProps
 
 const CarouselContext = React.createContext<CarouselContextProps | null>(null)
@@ -63,6 +64,7 @@ const Carousel = React.forwardRef<
       autoplayInterval = 3000,
       marquee = false,
       marqueeSpeed = 20,
+      pauseBetweenSlides = 2000, // Default pause of 2 seconds
       ...props
     },
     ref
@@ -78,6 +80,7 @@ const Carousel = React.forwardRef<
     const [carouselRef, api] = useEmblaCarousel(options, plugins)
     const [canScrollPrev, setCanScrollPrev] = React.useState(false)
     const [canScrollNext, setCanScrollNext] = React.useState(false)
+    const [isPaused, setIsPaused] = React.useState(false) // State to track pause
 
     const onSelect = React.useCallback((api: CarouselApi) => {
       if (!api) {
@@ -96,7 +99,7 @@ const Carousel = React.forwardRef<
       api?.scrollNext()
     }, [api])
 
-    // Autoplay functionality
+    // Autoplay functionality with pause between slides
     React.useEffect(() => {
       if (!api || !autoplay) return
 
@@ -107,18 +110,42 @@ const Carousel = React.forwardRef<
       return () => clearInterval(intervalId)
     }, [api, autoplay, autoplayInterval])
 
-    // Marquee effect
+    // Marquee effect with pauses
     React.useEffect(() => {
       if (!api || !marquee) return
 
-      let animationFrame: number
-      const scroll = () => {
-        api.scrollNext({ behavior: "auto" })
-        animationFrame = requestAnimationFrame(scroll)
+      let animationId: number
+      let lastScrollTime = 0
+      const scrollSpeed = 500 - Math.min(marqueeSpeed * 20, 490); // Convert speed to ms delay (inverted: higher number = slower)
+
+      const scroll = (timestamp: number) => {
+        if (!lastScrollTime) lastScrollTime = timestamp;
+        
+        const elapsed = timestamp - lastScrollTime;
+        
+        if (elapsed > scrollSpeed) {
+          if (!isPaused) {
+            api.scrollNext()
+            
+            // Check if we need to pause
+            const currentIndex = api.selectedScrollSnap();
+            const totalSlides = api.slideNodes().length;
+            
+            // If we just moved to a new slide, pause
+            if (currentIndex % 1 === 0) {
+              setIsPaused(true);
+              setTimeout(() => setIsPaused(false), pauseBetweenSlides);
+            }
+            
+            lastScrollTime = timestamp;
+          }
+        }
+        
+        animationId = requestAnimationFrame(scroll);
       }
 
       const startMarquee = () => {
-        animationFrame = requestAnimationFrame(scroll)
+        animationId = requestAnimationFrame(scroll);
       }
 
       api.on("init", startMarquee)
@@ -127,9 +154,9 @@ const Carousel = React.forwardRef<
       return () => {
         api.off("init", startMarquee)
         api.off("reInit", startMarquee)
-        cancelAnimationFrame(animationFrame)
+        cancelAnimationFrame(animationId)
       }
-    }, [api, marquee, marqueeSpeed])
+    }, [api, marquee, marqueeSpeed, pauseBetweenSlides, isPaused])
 
     const handleKeyDown = React.useCallback(
       (event: React.KeyboardEvent<HTMLDivElement>) => {
@@ -179,7 +206,8 @@ const Carousel = React.forwardRef<
           canScrollPrev,
           canScrollNext,
           autoplay,
-          marquee
+          marquee,
+          pauseBetweenSlides
         }}
       >
         <div

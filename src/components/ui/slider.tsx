@@ -8,11 +8,12 @@ const Slider = React.forwardRef<
   React.ElementRef<typeof SliderPrimitive.Root>,
   React.ComponentPropsWithoutRef<typeof SliderPrimitive.Root> & {
     animated?: boolean
+    animationSpeed?: number
   }
->(({ className, animated = false, ...props }, ref) => {
+>(({ className, animated = false, animationSpeed = 200, ...props }, ref) => {
   const [animatedValue, setAnimatedValue] = React.useState(props.defaultValue || [0]);
   
-  // Animation effect for the slider
+  // Animation effect for the slider, but slower
   React.useEffect(() => {
     if (!animated) return;
     
@@ -23,10 +24,10 @@ const Slider = React.forwardRef<
       // Increment by 1 and reset when reaching max
       nextValue[0] = (nextValue[0] + 1) % (maxValue + 1);
       setAnimatedValue(nextValue);
-    }, 100);
+    }, animationSpeed); // Slow down the animation
     
     return () => clearInterval(interval);
-  }, [animated, animatedValue, props.max]);
+  }, [animated, animatedValue, props.max, animationSpeed]);
   
   const currentValue = animated ? animatedValue : props.value || props.defaultValue;
   

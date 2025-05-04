@@ -66,6 +66,8 @@ const HomePage: React.FC = () => {
           <Carousel
             opts={{ align: "start", loop: true }}
             marquee={true}
+            marqueeSpeed={2} // Slower speed
+            pauseBetweenSlides={2000} // 2 second pause between slides
             className="w-full mx-auto"
           >
             <CarouselContent>
@@ -265,6 +267,8 @@ const HomePage: React.FC = () => {
           <Carousel
             opts={{ align: "start", loop: true }}
             marquee={true}
+            marqueeSpeed={3} // Slower speed
+            pauseBetweenSlides={2000} // 2 second pause between slides
             className="w-full"
           >
             <CarouselContent>

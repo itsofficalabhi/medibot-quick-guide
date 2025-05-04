@@ -81,6 +81,7 @@ const Carousel = React.forwardRef<
     const [canScrollPrev, setCanScrollPrev] = React.useState(false)
     const [canScrollNext, setCanScrollNext] = React.useState(false)
     const [isPaused, setIsPaused] = React.useState(false) // State to track pause
+    const [currentIndex, setCurrentIndex] = React.useState(0) // Track current slide
 
     const onSelect = React.useCallback((api: CarouselApi) => {
       if (!api) {
@@ -89,6 +90,7 @@ const Carousel = React.forwardRef<
 
       setCanScrollPrev(api.canScrollPrev())
       setCanScrollNext(api.canScrollNext())
+      setCurrentIndex(api.selectedScrollSnap())
     }, [])
 
     const scrollPrev = React.useCallback(() => {
@@ -99,64 +101,55 @@ const Carousel = React.forwardRef<
       api?.scrollNext()
     }, [api])
 
-    // Autoplay functionality with pause between slides
+    // Autoplay functionality
     React.useEffect(() => {
       if (!api || !autoplay) return
 
       const intervalId = setInterval(() => {
-        api.scrollNext()
-      }, autoplayInterval)
+        if (!isPaused) {
+          api.scrollNext()
+          setIsPaused(true)
+          setTimeout(() => setIsPaused(false), pauseBetweenSlides)
+        }
+      }, autoplayInterval + pauseBetweenSlides)
 
       return () => clearInterval(intervalId)
-    }, [api, autoplay, autoplayInterval])
+    }, [api, autoplay, autoplayInterval, pauseBetweenSlides, isPaused])
 
     // Marquee effect with pauses
     React.useEffect(() => {
       if (!api || !marquee) return
 
       let animationId: number
-      let lastScrollTime = 0
-      const scrollSpeed = 500 - Math.min(marqueeSpeed * 20, 490); // Convert speed to ms delay (inverted: higher number = slower)
+      let lastTime = 0
+      const scrollSpeed = 500 - Math.min(marqueeSpeed * 20, 490) // Convert speed to delay
 
-      const scroll = (timestamp: number) => {
-        if (!lastScrollTime) lastScrollTime = timestamp;
+      const animate = (currentTime: number) => {
+        if (!lastTime) lastTime = currentTime
+        const deltaTime = currentTime - lastTime
         
-        const elapsed = timestamp - lastScrollTime;
-        
-        if (elapsed > scrollSpeed) {
-          if (!isPaused) {
-            api.scrollNext()
-            
-            // Check if we need to pause
-            const currentIndex = api.selectedScrollSnap();
-            const totalSlides = api.slideNodes().length;
-            
-            // If we just moved to a new slide, pause
-            if (currentIndex % 1 === 0) {
-              setIsPaused(true);
-              setTimeout(() => setIsPaused(false), pauseBetweenSlides);
-            }
-            
-            lastScrollTime = timestamp;
+        if (deltaTime > scrollSpeed && !isPaused) {
+          api.scrollNext()
+          lastTime = currentTime
+          
+          // Pause after each slide
+          const newIndex = api.selectedScrollSnap()
+          if (newIndex !== currentIndex) {
+            setCurrentIndex(newIndex)
+            setIsPaused(true)
+            setTimeout(() => {
+              setIsPaused(false)
+            }, pauseBetweenSlides)
           }
         }
         
-        animationId = requestAnimationFrame(scroll);
+        animationId = requestAnimationFrame(animate)
       }
 
-      const startMarquee = () => {
-        animationId = requestAnimationFrame(scroll);
-      }
-
-      api.on("init", startMarquee)
-      api.on("reInit", startMarquee)
-
-      return () => {
-        api.off("init", startMarquee)
-        api.off("reInit", startMarquee)
-        cancelAnimationFrame(animationId)
-      }
-    }, [api, marquee, marqueeSpeed, pauseBetweenSlides, isPaused])
+      animationId = requestAnimationFrame(animate)
+      
+      return () => cancelAnimationFrame(animationId)
+    }, [api, marquee, marqueeSpeed, pauseBetweenSlides, isPaused, currentIndex])
 
     const handleKeyDown = React.useCallback(
       (event: React.KeyboardEvent<HTMLDivElement>) => {

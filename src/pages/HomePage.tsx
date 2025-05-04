@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -64,9 +63,9 @@ const HomePage: React.FC = () => {
           </div>
           
           <Carousel
-            opts={{ align: "start", loop: true }}
-            marquee={true}
-            marqueeSpeed={2} // Slower speed
+            opts={{ align: "start" }}
+            autoplay={true} // Enable autoplay
+            autoplayInterval={5000} // 5 seconds per slide
             pauseBetweenSlides={2000} // 2 second pause between slides
             className="w-full mx-auto"
           >
@@ -172,6 +171,10 @@ const HomePage: React.FC = () => {
                 </Card>
               </CarouselItem>
             </CarouselContent>
+            <div className="flex justify-center gap-2 mt-4">
+              <CarouselPrevious />
+              <CarouselNext />
+            </div>
           </Carousel>
         </div>
       </section>
@@ -265,14 +268,14 @@ const HomePage: React.FC = () => {
           </div>
           
           <Carousel
-            opts={{ align: "start", loop: true }}
-            marquee={true}
-            marqueeSpeed={3} // Slower speed
+            opts={{ align: "start" }}
+            autoplay={true} // Enable autoplay
+            autoplayInterval={4000} // 4 seconds per slide
             pauseBetweenSlides={2000} // 2 second pause between slides
             className="w-full"
           >
             <CarouselContent>
-              {[1, 2, 3, 4, 5, 1, 2, 3].map((i, index) => (
+              {[1, 2, 3, 4, 5].map((i, index) => (
                 <CarouselItem key={`testimonial-${i}-${index}`} className="basis-full md:basis-1/2 lg:basis-1/3 pl-4">
                   <Card className="border border-border h-full">
                     <CardContent className="pt-6">
@@ -315,9 +318,13 @@ const HomePage: React.FC = () => {
                 </CarouselItem>
               ))}
             </CarouselContent>
+            <div className="flex justify-center gap-2 mt-4">
+              <CarouselPrevious />
+              <CarouselNext />
+            </div>
           </Carousel>
           
-          {/* Patient Satisfaction Slider - Now Animated */}
+          {/* Patient Satisfaction Slider - With Slower Animation */}
           <div className="max-w-md mx-auto mt-12 text-center">
             <h3 className="font-medium mb-4">Patient Satisfaction</h3>
             <Slider
@@ -326,6 +333,7 @@ const HomePage: React.FC = () => {
               step={1}
               disabled
               animated={true}
+              animationSpeed={400} // Slower animation
               className="w-full"
             />
             <p className="mt-2 text-sm text-muted-foreground">96% of our patients are satisfied with our services</p>

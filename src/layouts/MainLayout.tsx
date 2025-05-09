@@ -26,6 +26,8 @@ const MainLayout: React.FC = () => {
     return user?.role === 'doctor' ? '/doctor-dashboard' : '/user-dashboard';
   };
 
+  const isDoctor = user?.role === 'doctor';
+
   return (
     <div className="flex flex-col min-h-screen">
       <header className="border-b sticky top-0 bg-card z-30">
@@ -48,26 +50,32 @@ const MainLayout: React.FC = () => {
             </Link>
             
             <nav className="hidden md:flex items-center space-x-4 text-sm">
-              <Link
-                to="/"
-                className={`${
-                  location.pathname === '/'
-                    ? 'text-primary font-medium'
-                    : 'text-muted-foreground'
-                } hover:text-primary transition-colors`}
-              >
-                Home
-              </Link>
-              <Link
-                to="/doctors"
-                className={`${
-                  location.pathname.includes('/doctors')
-                    ? 'text-primary font-medium'
-                    : 'text-muted-foreground'
-                } hover:text-primary transition-colors`}
-              >
-                Find Doctors
-              </Link>
+              {!isDoctor && (
+                <Link
+                  to="/"
+                  className={`${
+                    location.pathname === '/'
+                      ? 'text-primary font-medium'
+                      : 'text-muted-foreground'
+                  } hover:text-primary transition-colors`}
+                >
+                  Home
+                </Link>
+              )}
+              
+              {!isDoctor && (
+                <Link
+                  to="/doctors"
+                  className={`${
+                    location.pathname.includes('/doctors')
+                      ? 'text-primary font-medium'
+                      : 'text-muted-foreground'
+                  } hover:text-primary transition-colors`}
+                >
+                  Find Doctors
+                </Link>
+              )}
+              
               {isAuthenticated && (
                 <Link
                   to={getDashboardLink()}
@@ -80,6 +88,7 @@ const MainLayout: React.FC = () => {
                   Dashboard
                 </Link>
               )}
+              
               <Link
                 to="/chat"
                 className={`${
@@ -181,11 +190,13 @@ const MainLayout: React.FC = () => {
                     Home
                   </Link>
                 </li>
-                <li>
-                  <Link to="/doctors" className="text-muted-foreground hover:text-primary transition-colors">
-                    Find Doctors
-                  </Link>
-                </li>
+                {!isDoctor && (
+                  <li>
+                    <Link to="/doctors" className="text-muted-foreground hover:text-primary transition-colors">
+                      Find Doctors
+                    </Link>
+                  </li>
+                )}
                 <li>
                   <Link to="/login" className="text-muted-foreground hover:text-primary transition-colors">
                     Sign In

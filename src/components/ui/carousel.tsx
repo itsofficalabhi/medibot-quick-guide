@@ -2,8 +2,6 @@
 import * as React from "react"
 import useEmblaCarousel, {
   type UseEmblaCarouselType,
-  type EmblaOptionsType as OptionsType,
-  type EmblaPluginType as CarouselPlugin,
 } from "embla-carousel-react"
 import { ArrowLeft, ArrowRight } from "lucide-react"
 
@@ -13,6 +11,7 @@ import { Button } from "@/components/ui/button"
 type CarouselApi = UseEmblaCarouselType[1]
 type UseCarouselParameters = Parameters<typeof useEmblaCarousel>
 type CarouselOptions = UseCarouselParameters[0]
+type CarouselPlugin = UseCarouselParameters[1]
 
 type CarouselProps = {
   opts?: CarouselOptions
@@ -20,22 +19,21 @@ type CarouselProps = {
   orientation?: "horizontal" | "vertical"
   setApi?: (api: CarouselApi) => void
   autoplay?: boolean
-  autoplayInterval?: number
+  interval?: number
   marquee?: boolean
-  marqueeSpeed?: number
-  pauseBetweenSlides?: number // New prop for pause duration
+  speed?: number
+  marqueeDirection?: "ltr" | "rtl"
 }
 
 type CarouselContextProps = {
-  carouselRef: ReturnType<typeof useEmblaCarousel>[0]
+  carouselRef: ReturnType<typeof React.useRef<HTMLDivElement>>
   api: ReturnType<typeof useEmblaCarousel>[1]
+  opts: CarouselOptions
+  orientation: Exclude<CarouselProps["orientation"], undefined>
   scrollPrev: () => void
   scrollNext: () => void
   canScrollPrev: boolean
   canScrollNext: boolean
-  autoplay: boolean
-  marquee: boolean
-  pauseBetweenSlides: number // Add to context
 } & CarouselProps
 
 const CarouselContext = React.createContext<CarouselContextProps | null>(null)
@@ -60,98 +58,37 @@ const Carousel = React.forwardRef<
       opts,
       setApi,
       plugins,
+      autoplay = false,
+      interval = 3000,
       className,
       children,
-      autoplay = false,
-      autoplayInterval = 3000,
-      marquee = false,
-      marqueeSpeed = 20,
-      pauseBetweenSlides = 2000, // Default pause of 2 seconds
+      marquee,
+      speed = 1,
+      marqueeDirection = "ltr",
       ...props
     },
     ref
   ) => {
-    const options: OptionsType = {
+    const options = {
       ...opts,
       axis: orientation === "horizontal" ? "x" : "y",
       loop: marquee || opts?.loop,
-      draggable: !marquee,
-      dragFree: marquee
+      draggable: marquee ? false : opts?.draggable ?? true,
+      dragFree: marquee ? true : opts?.dragFree ?? false,
     }
 
-    const [carouselRef, api] = useEmblaCarousel(options, plugins)
+    const carouselRef = React.useRef<HTMLDivElement>(null)
+    const [emblaRef, emblaApi] = useEmblaCarousel(options, plugins)
     const [canScrollPrev, setCanScrollPrev] = React.useState(false)
     const [canScrollNext, setCanScrollNext] = React.useState(false)
-    const [isPaused, setIsPaused] = React.useState(false) // State to track pause
-    const [currentIndex, setCurrentIndex] = React.useState(0) // Track current slide
-
-    const onSelect = React.useCallback((api: CarouselApi) => {
-      if (!api) {
-        return
-      }
-
-      setCanScrollPrev(api.canScrollPrev())
-      setCanScrollNext(api.canScrollNext())
-      setCurrentIndex(api.selectedScrollSnap())
-    }, [])
 
     const scrollPrev = React.useCallback(() => {
-      api?.scrollPrev()
-    }, [api])
+      emblaApi?.scrollPrev()
+    }, [emblaApi])
 
     const scrollNext = React.useCallback(() => {
-      api?.scrollNext()
-    }, [api])
-
-    // Autoplay functionality
-    React.useEffect(() => {
-      if (!api || !autoplay) return
-
-      const intervalId = setInterval(() => {
-        if (!isPaused) {
-          api.scrollNext()
-          setIsPaused(true)
-          setTimeout(() => setIsPaused(false), pauseBetweenSlides)
-        }
-      }, autoplayInterval + pauseBetweenSlides)
-
-      return () => clearInterval(intervalId)
-    }, [api, autoplay, autoplayInterval, pauseBetweenSlides, isPaused])
-
-    // Marquee effect with pauses
-    React.useEffect(() => {
-      if (!api || !marquee) return
-
-      let animationId: number
-      let lastTime = 0
-      const scrollSpeed = 500 - Math.min(marqueeSpeed * 20, 490) // Convert speed to delay
-
-      const animate = (currentTime: number) => {
-        if (!lastTime) lastTime = currentTime
-        const deltaTime = currentTime - lastTime
-        
-        if (deltaTime > scrollSpeed && !isPaused) {
-          api.scrollNext()
-          lastTime = currentTime
-          
-          // Pause after each slide
-          const newIndex = api.selectedScrollSnap()
-          if (newIndex !== currentIndex) {
-            setCurrentIndex(newIndex)
-            setIsPaused(true)
-            setTimeout(() => {
-              setIsPaused(false)
-            }, pauseBetweenSlides)
-          }
-        }
-        
-        animationId = requestAnimationFrame(animate)
-      }
-
-      animationId = requestAnimationFrame(animate)
-      
-      return () => cancelAnimationFrame(animationId)
-    }, [api, marquee, marqueeSpeed, pauseBetweenSlides, isPaused, currentIndex])
+      emblaApi?.scrollNext()
+    }, [emblaApi])
 
     const handleKeyDown = React.useCallback(
       (event: React.KeyboardEvent<HTMLDivElement>) => {
@@ -166,33 +103,76 @@ const Carousel = React.forwardRef<
       [scrollPrev, scrollNext]
     )
 
+    const onSelect = React.useCallback(() => {
+      if (!emblaApi) return
+
+      setCanScrollPrev(emblaApi.canScrollPrev())
+      setCanScrollNext(emblaApi.canScrollNext())
+    }, [emblaApi, setCanScrollPrev, setCanScrollNext])
+
     React.useEffect(() => {
-      if (!api || !setApi) {
+      if (!emblaApi) {
         return
       }
 
-      setApi(api)
-    }, [api, setApi])
+      onSelect()
+      emblaApi.on("select", onSelect)
+      emblaApi.on("reInit", onSelect)
+
+      if (setApi) {
+        setApi(emblaApi)
+      }
+    }, [emblaApi, onSelect, setApi])
 
     React.useEffect(() => {
-      if (!api) {
-        return
+      if (marquee && emblaApi) {
+        const autoplayTimer = setInterval(() => {
+          const scrollDirection = marqueeDirection === "ltr" ? 1 : -1
+          const scrollSnaps = emblaApi.scrollSnapList()
+          const lastSnap = scrollSnaps.length - 1
+
+          if (lastSnap === 0) {
+            return
+          }
+
+          const targetIndex =
+            marqueeDirection === "ltr" ? 1 : emblaApi.selectedScrollSnap() - 1
+
+          if (targetIndex < 0) {
+            emblaApi.scrollTo(lastSnap)
+            return
+          }
+
+          if (targetIndex > lastSnap) {
+            emblaApi.scrollTo(0)
+            return
+          }
+
+          emblaApi.scrollTo(targetIndex)
+        }, 100 / speed)
+
+        return () => clearInterval(autoplayTimer)
       }
 
-      onSelect(api)
-      api.on("reInit", onSelect)
-      api.on("select", onSelect)
+      if (autoplay && emblaApi) {
+        const autoplayTimer = setInterval(() => {
+          if (!emblaApi.canScrollNext()) {
+            emblaApi.scrollTo(0)
+            return
+          }
 
-      return () => {
-        api?.off("select", onSelect)
+          emblaApi.scrollNext()
+        }, interval)
+
+        return () => clearInterval(autoplayTimer)
       }
-    }, [api, onSelect])
+    }, [autoplay, emblaApi, interval, marquee, marqueeDirection, speed])
 
     return (
       <CarouselContext.Provider
         value={{
           carouselRef,
-          api: api,
+          api: emblaApi,
           opts: options,
           orientation,
           scrollPrev,
@@ -200,19 +180,22 @@ const Carousel = React.forwardRef<
           canScrollPrev,
           canScrollNext,
           autoplay,
-          marquee,
-          pauseBetweenSlides
+          interval,
         }}
       >
         <div
           ref={ref}
-          onKeyDownCapture={handleKeyDown}
           className={cn("relative", className)}
           role="region"
           aria-roledescription="carousel"
+          onKeyDownCapture={handleKeyDown}
           {...props}
         >
-          {children}
+          <div ref={carouselRef} className="overflow-hidden">
+            <div ref={emblaRef} className="flex">
+              {children}
+            </div>
+          </div>
         </div>
       </CarouselContext.Provider>
     )
@@ -224,20 +207,18 @@ const CarouselContent = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
 >(({ className, ...props }, ref) => {
-  const { carouselRef, orientation } = useCarousel()
+  const { orientation } = useCarousel()
 
   return (
-    <div ref={carouselRef} className="overflow-hidden">
-      <div
-        ref={ref}
-        className={cn(
-          "flex",
-          orientation === "horizontal" ? "-ml-4" : "-mt-4 flex-col",
-          className
-        )}
-        {...props}
-      />
-    </div>
+    <div
+      ref={ref}
+      className={cn(
+        "flex",
+        orientation === "horizontal" ? "-ml-4" : "-mt-4 flex-col",
+        className
+      )}
+      {...props}
+    />
   )
 })
 CarouselContent.displayName = "CarouselContent"
@@ -268,9 +249,7 @@ const CarouselPrevious = React.forwardRef<
   HTMLButtonElement,
   React.ComponentProps<typeof Button>
 >(({ className, variant = "outline", size = "icon", ...props }, ref) => {
-  const { orientation, scrollPrev, canScrollPrev, marquee } = useCarousel()
-  
-  if (marquee) return null;
+  const { orientation, scrollPrev, canScrollPrev } = useCarousel()
 
   return (
     <Button
@@ -278,7 +257,7 @@ const CarouselPrevious = React.forwardRef<
       variant={variant}
       size={size}
       className={cn(
-        "absolute  h-8 w-8 rounded-full",
+        "absolute h-8 w-8 rounded-full",
         orientation === "horizontal"
           ? "-left-12 top-1/2 -translate-y-1/2"
           : "-top-12 left-1/2 -translate-x-1/2 rotate-90",
@@ -299,9 +278,7 @@ const CarouselNext = React.forwardRef<
   HTMLButtonElement,
   React.ComponentProps<typeof Button>
 >(({ className, variant = "outline", size = "icon", ...props }, ref) => {
-  const { orientation, scrollNext, canScrollNext, marquee } = useCarousel()
-  
-  if (marquee) return null;
+  const { orientation, scrollNext, canScrollNext } = useCarousel()
 
   return (
     <Button

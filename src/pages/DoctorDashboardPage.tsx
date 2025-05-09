@@ -1,62 +1,84 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { Separator } from '@/components/ui/separator';
-import { Calendar, User, DollarSign, Video, Clock, CheckCircle, FileText } from 'lucide-react';
+import { Calendar, User, DollarSign, Video, Clock, CheckCircle, FileText, BarChart, MessageSquare, BellIcon, Settings } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import PrescriptionForm from '@/components/PrescriptionForm';
 import PrescriptionsList from '@/components/PrescriptionsList';
+import { toast } from '@/components/ui/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const DoctorDashboardPage: React.FC = () => {
   const { user, logout } = useAuth();
-  const [activeTab, setActiveTab] = useState<'appointments' | 'patients' | 'earnings' | 'prescriptions' | 'settings'>('appointments');
+  const [activeTab, setActiveTab] = useState<'appointments' | 'patients' | 'earnings' | 'prescriptions' | 'analytics' | 'messages' | 'settings'>('appointments');
   const [showPrescriptionForm, setShowPrescriptionForm] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState<{id: string; name: string; appointmentId: number} | null>(null);
+  const [appointments, setAppointments] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [doctorDetails, setDoctorDetails] = useState<any>(null);
 
-  // Mock data for appointments
-  const upcomingAppointments = [
-    {
-      id: 1,
-      patientName: 'John Smith',
-      patientId: 'user1',
-      appointmentType: 'Video Consultation',
-      date: '2025-05-10',
-      time: '10:30 AM',
-      status: 'confirmed'
-    },
-    {
-      id: 2,
-      patientName: 'Jane Doe',
-      patientId: 'user2',
-      appointmentType: 'Video Consultation',
-      date: '2025-05-15',
-      time: '2:00 PM',
-      status: 'pending'
-    }
-  ];
+  useEffect(() => {
+    const fetchDoctorDetails = async () => {
+      if (!user) return;
+      
+      try {
+        const { data: doctorData, error: doctorError } = await supabase
+          .from('doctors')
+          .select('*')
+          .eq('user_id', user.id)
+          .single();
+        
+        if (doctorError) throw doctorError;
+        
+        if (doctorData) {
+          setDoctorDetails(doctorData);
+          
+          // Now fetch appointments for this doctor
+          const { data: appointmentsData, error: appointmentsError } = await supabase
+            .from('appointments')
+            .select(`
+              *,
+              profiles:patient_id (
+                first_name,
+                last_name,
+                avatar_url
+              )
+            `)
+            .eq('doctor_id', doctorData.id)
+            .order('date', { ascending: true });
+          
+          if (appointmentsError) throw appointmentsError;
+          
+          setAppointments(appointmentsData || []);
+        }
+      } catch (error) {
+        console.error("Error fetching doctor data:", error);
+        toast({
+          title: "Error",
+          description: "Could not fetch your doctor information",
+          variant: "destructive"
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchDoctorDetails();
+  }, [user]);
 
-  const pastAppointments = [
-    {
-      id: 3,
-      patientName: 'Robert Johnson',
-      patientId: 'user3',
-      appointmentType: 'Chat Consultation',
-      date: '2025-04-20',
-      time: '11:00 AM',
-      status: 'completed'
-    },
-    {
-      id: 4,
-      patientName: 'Maria Garcia',
-      patientId: 'user4',
-      appointmentType: 'Video Consultation',
-      date: '2025-04-15',
-      time: '3:30 PM',
-      status: 'completed'
-    }
-  ];
+  const upcomingAppointments = appointments.filter(
+    app => new Date(`${app.date}T${app.time}`) >= new Date() && app.status !== 'cancelled'
+  );
+  
+  const pastAppointments = appointments.filter(
+    app => new Date(`${app.date}T${app.time}`) < new Date() || app.status === 'cancelled'
+  );
 
   // Mock data for patients
   const patients = [
@@ -65,48 +87,55 @@ const DoctorDashboardPage: React.FC = () => {
       name: 'John Smith',
       age: 45,
       lastVisit: '2025-05-01',
-      condition: 'Hypertension'
+      condition: 'Hypertension',
+      avatar: '/placeholder.svg'
     },
     {
       id: 'user2',
       name: 'Jane Doe',
       age: 32,
       lastVisit: '2025-04-28',
-      condition: 'Diabetes'
+      condition: 'Diabetes',
+      avatar: '/placeholder.svg'
     },
     {
       id: 'user3',
       name: 'Robert Johnson',
       age: 57,
       lastVisit: '2025-04-15',
-      condition: 'Arthritis'
+      condition: 'Arthritis',
+      avatar: '/placeholder.svg'
     },
     {
       id: 'user4',
       name: 'Maria Garcia',
       age: 29,
       lastVisit: '2025-04-10',
-      condition: 'Migraine'
+      condition: 'Migraine',
+      avatar: '/placeholder.svg'
     },
     {
       id: 'user5',
       name: 'David Miller',
       age: 41,
       lastVisit: '2025-04-05',
-      condition: 'Asthma'
+      condition: 'Asthma',
+      avatar: '/placeholder.svg'
     }
-  ];
-
-  // Calculate earnings based on mock data
-  const calculateEarnings = () => {
-    // In a real app, this would come from a database
-    // For demo purposes, we'll use 10 completed consultations at $100 each
-    const completedAppointments = 10;
-    const ratePerConsultation = 100;
-    return completedAppointments * ratePerConsultation;
-  };
-
-  const totalEarnings = calculateEarnings();
+  ].concat(
+    appointments
+      .filter(app => app.profiles)
+      .map(app => ({
+        id: app.patient_id,
+        name: `${app.profiles.first_name} ${app.profiles.last_name}`,
+        lastVisit: app.date,
+        avatar: app.profiles.avatar_url || '/placeholder.svg',
+        age: 35, // Placeholder age
+        condition: 'Consultation'
+      }))
+  ).filter((patient, index, self) => 
+    index === self.findIndex(p => p.id === patient.id)
+  );
 
   const handleWritePrescription = (patient: {id: string; name: string}, appointmentId: number) => {
     setSelectedPatient({
@@ -117,126 +146,312 @@ const DoctorDashboardPage: React.FC = () => {
     setShowPrescriptionForm(true);
   };
 
+  const updateAppointmentStatus = async (appointmentId: string, status: string) => {
+    try {
+      const { error } = await supabase
+        .from('appointments')
+        .update({ status })
+        .eq('id', appointmentId);
+      
+      if (error) throw error;
+      
+      // Update local state
+      setAppointments(prev => 
+        prev.map(app => 
+          app.id === appointmentId ? { ...app, status } : app
+        )
+      );
+      
+      toast({
+        title: "Status Updated",
+        description: `Appointment ${status} successfully`
+      });
+    } catch (error) {
+      console.error("Error updating appointment:", error);
+      toast({
+        title: "Error",
+        description: "Could not update appointment status",
+        variant: "destructive"
+      });
+    }
+  };
+
   const renderAppointmentContent = () => {
+    if (loading) {
+      return (
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        </div>
+      );
+    }
+    
     return (
       <div>
-        <div className="mb-6">
-          <h3 className="text-lg font-semibold mb-4">Upcoming Appointments</h3>
-          {upcomingAppointments.length > 0 ? (
-            <div className="space-y-3">
-              {upcomingAppointments.map((appointment) => (
-                <Card key={appointment.id} className="overflow-hidden">
-                  <CardContent className="p-0">
-                    <div className="grid md:grid-cols-3 gap-4">
-                      <div className="p-4 md:border-r">
-                        <div className="text-sm text-muted-foreground mb-1">
-                          {appointment.date} at {appointment.time}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm text-muted-foreground">Today's Appointments</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {appointments.filter(app => app.date === new Date().toISOString().split('T')[0]).length}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+              </p>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm text-muted-foreground">Total Patients</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{patients.length}</div>
+              <p className="text-xs text-muted-foreground mt-1">Active patients under your care</p>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm text-muted-foreground">Completion Rate</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {appointments.length ? 
+                  Math.round((appointments.filter(app => app.status === 'completed').length / appointments.length) * 100) : 
+                  0}%
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">Appointment completion rate</p>
+            </CardContent>
+          </Card>
+        </div>
+      
+        <Tabs defaultValue="upcoming" className="mb-6">
+          <TabsList>
+            <TabsTrigger value="upcoming">Upcoming Appointments</TabsTrigger>
+            <TabsTrigger value="past">Past Appointments</TabsTrigger>
+          </TabsList>
+          <TabsContent value="upcoming" className="pt-4">
+            {upcomingAppointments.length > 0 ? (
+              <div className="space-y-3">
+                {upcomingAppointments.map((appointment) => (
+                  <Card key={appointment.id} className="overflow-hidden">
+                    <CardContent className="p-0">
+                      <div className="grid md:grid-cols-4 gap-4">
+                        <div className="p-4 md:border-r">
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-10 w-10">
+                              <AvatarImage src={appointment.profiles?.avatar_url || '/placeholder.svg'} />
+                              <AvatarFallback>
+                                {appointment.profiles ? 
+                                  `${appointment.profiles.first_name?.[0]}${appointment.profiles.last_name?.[0]}` : 
+                                  'PT'}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <h4 className="font-medium">
+                                {appointment.profiles ? 
+                                  `${appointment.profiles.first_name} ${appointment.profiles.last_name}` : 
+                                  'Patient'}
+                              </h4>
+                              <div className="text-sm text-muted-foreground">
+                                {new Date(appointment.date).toLocaleDateString()} at {appointment.time}
+                              </div>
+                            </div>
+                          </div>
                         </div>
-                        <h4 className="font-medium">{appointment.patientName}</h4>
-                      </div>
-                      <div className="p-4 md:border-r flex items-center">
-                        <div>
+                        <div className="p-4 md:border-r">
                           <div className="text-sm text-muted-foreground mb-1">Appointment Type</div>
                           <div className="flex items-center">
-                            {appointment.appointmentType === 'Video Consultation' ? (
+                            {appointment.type === 'video' ? (
                               <Video className="h-4 w-4 text-primary mr-1" />
-                            ) : appointment.appointmentType === 'Phone Consultation' ? (
+                            ) : appointment.type === 'phone' ? (
                               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-primary mr-1" viewBox="0 0 20 20" fill="currentColor">
                                 <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
                               </svg>
                             ) : (
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-primary mr-1" viewBox="0 0 20 20" fill="currentColor">
-                                <path fillRule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clipRule="evenodd" />
-                              </svg>
+                              <MessageSquare className="h-4 w-4 text-primary mr-1" />
                             )}
-                            <span>{appointment.appointmentType}</span>
+                            <span className="capitalize">{appointment.type} Consultation</span>
+                          </div>
+                          <div className="text-sm text-muted-foreground mt-2">
+                            <span className="font-medium">Fee:</span> ${appointment.amount}
+                          </div>
+                        </div>
+                        <div className="p-4 md:border-r">
+                          <div className="text-sm text-muted-foreground mb-1">Status</div>
+                          <div className="flex items-center">
+                            <span className={`inline-block w-2 h-2 rounded-full mr-2 ${
+                              appointment.status === 'scheduled' 
+                                ? 'bg-green-500' 
+                                : appointment.status === 'pending' 
+                                ? 'bg-yellow-500' 
+                                : 'bg-blue-500'
+                            }`}></span>
+                            <span className="capitalize">{appointment.status}</span>
+                          </div>
+                          <div className="text-sm text-muted-foreground mt-2">
+                            <span className="font-medium">Payment:</span> 
+                            <span className={appointment.payment_status === 'paid' ? 'text-green-500' : 'text-yellow-500'}>
+                              {' '}{appointment.payment_status}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="p-4 flex items-center justify-between md:justify-end">
+                          <div className="flex space-x-2">
+                            {appointment.status === 'scheduled' && (
+                              <Button 
+                                size="sm" 
+                                onClick={() => window.open(`/video-call?appointmentId=${appointment.id}`, '_blank')}
+                              >
+                                Start Call
+                              </Button>
+                            )}
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline"
+                                    onClick={() => updateAppointmentStatus(appointment.id, 'cancelled')}
+                                  >
+                                    Cancel
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Cancel this appointment</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
                           </div>
                         </div>
                       </div>
-                      <div className="p-4 flex items-center justify-between md:justify-end">
-                        <div className="flex items-center">
-                          <span className={`inline-block w-2 h-2 rounded-full mr-2 ${
-                            appointment.status === 'confirmed' 
-                              ? 'bg-green-500' 
-                              : appointment.status === 'pending' 
-                              ? 'bg-yellow-500' 
-                              : 'bg-blue-500'
-                          }`}></span>
-                          <span className="capitalize">{appointment.status}</span>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-6 bg-muted/50 rounded-lg">
+                <Calendar className="h-10 w-10 mx-auto text-muted-foreground mb-2" />
+                <h4 className="font-medium mb-1">No upcoming appointments</h4>
+                <p className="text-sm text-muted-foreground mb-4">You don't have any scheduled appointments.</p>
+              </div>
+            )}
+          </TabsContent>
+          <TabsContent value="past" className="pt-4">
+            {pastAppointments.length > 0 ? (
+              <div className="space-y-3">
+                {pastAppointments.map((appointment) => (
+                  <Card key={appointment.id} className="overflow-hidden">
+                    <CardContent className="p-0">
+                      <div className="grid md:grid-cols-4 gap-4">
+                        <div className="p-4 md:border-r">
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-10 w-10">
+                              <AvatarImage src={appointment.profiles?.avatar_url || '/placeholder.svg'} />
+                              <AvatarFallback>
+                                {appointment.profiles ? 
+                                  `${appointment.profiles.first_name?.[0]}${appointment.profiles.last_name?.[0]}` : 
+                                  'PT'}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <h4 className="font-medium">
+                                {appointment.profiles ? 
+                                  `${appointment.profiles.first_name} ${appointment.profiles.last_name}` : 
+                                  'Patient'}
+                              </h4>
+                              <div className="text-sm text-muted-foreground">
+                                {new Date(appointment.date).toLocaleDateString()} at {appointment.time}
+                              </div>
+                            </div>
+                          </div>
                         </div>
-                        <Button size="sm" className="ml-4" onClick={() => initiateZoomCall(appointment.id)}>Start Call</Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-6 bg-muted/50 rounded-lg">
-              <Calendar className="h-10 w-10 mx-auto text-muted-foreground mb-2" />
-              <h4 className="font-medium mb-1">No upcoming appointments</h4>
-              <p className="text-sm text-muted-foreground mb-4">You don't have any scheduled appointments.</p>
-            </div>
-          )}
-        </div>
-        
-        <div>
-          <h3 className="text-lg font-semibold mb-4">Past Appointments</h3>
-          {pastAppointments.length > 0 ? (
-            <div className="space-y-3">
-              {pastAppointments.map((appointment) => (
-                <Card key={appointment.id} className="overflow-hidden">
-                  <CardContent className="p-0">
-                    <div className="grid md:grid-cols-3 gap-4">
-                      <div className="p-4 md:border-r">
-                        <div className="text-sm text-muted-foreground mb-1">
-                          {appointment.date} at {appointment.time}
-                        </div>
-                        <h4 className="font-medium">{appointment.patientName}</h4>
-                      </div>
-                      <div className="p-4 md:border-r flex items-center">
-                        <div>
+                        <div className="p-4 md:border-r">
                           <div className="text-sm text-muted-foreground mb-1">Appointment Type</div>
                           <div className="flex items-center">
-                            {appointment.appointmentType === 'Video Consultation' ? (
+                            {appointment.type === 'video' ? (
                               <Video className="h-4 w-4 text-primary mr-1" />
                             ) : (
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-primary mr-1" viewBox="0 0 20 20" fill="currentColor">
-                                <path fillRule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clipRule="evenodd" />
-                              </svg>
+                              <MessageSquare className="h-4 w-4 text-primary mr-1" />
                             )}
-                            <span>{appointment.appointmentType}</span>
+                            <span className="capitalize">{appointment.type} Consultation</span>
+                          </div>
+                        </div>
+                        <div className="p-4 md:border-r">
+                          <div className="text-sm text-muted-foreground mb-1">Status</div>
+                          <div className="flex items-center">
+                            <span className={`inline-block w-2 h-2 rounded-full mr-2 ${
+                              appointment.status === 'completed' 
+                                ? 'bg-green-500' 
+                                : appointment.status === 'cancelled' 
+                                ? 'bg-red-500' 
+                                : 'bg-blue-500'
+                            }`}></span>
+                            <span className="capitalize">{appointment.status}</span>
+                          </div>
+                        </div>
+                        <div className="p-4 flex flex-wrap items-center justify-between md:justify-end">
+                          <div className="flex space-x-2">
+                            {appointment.status === 'completed' ? (
+                              <>
+                                <Button 
+                                  size="sm" 
+                                  variant="outline"
+                                  onClick={() => handleWritePrescription({
+                                    id: appointment.patient_id, 
+                                    name: appointment.profiles ? 
+                                      `${appointment.profiles.first_name} ${appointment.profiles.last_name}` : 
+                                      'Patient'
+                                  }, parseInt(appointment.id))}
+                                >
+                                  Write Prescription
+                                </Button>
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button 
+                                        size="sm" 
+                                        variant="secondary"
+                                        onClick={() => console.log('View session notes for', appointment.id)}
+                                      >
+                                        Notes
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>View consultation notes</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              </>
+                            ) : appointment.status === 'scheduled' && (
+                              <>
+                                <Button 
+                                  size="sm"
+                                  variant="secondary" 
+                                  onClick={() => updateAppointmentStatus(appointment.id, 'completed')}
+                                >
+                                  Mark Completed
+                                </Button>
+                              </>
+                            )}
                           </div>
                         </div>
                       </div>
-                      <div className="p-4 flex items-center justify-between md:justify-end">
-                        <div className="flex items-center">
-                          <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
-                          <span className="capitalize">Completed</span>
-                        </div>
-                        <div className="flex space-x-2">
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            onClick={() => handleWritePrescription({id: appointment.patientId, name: appointment.patientName}, appointment.id)}
-                          >
-                            Write Prescription
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-6 bg-muted/50 rounded-lg">
-              <Clock className="h-10 w-10 mx-auto text-muted-foreground mb-2" />
-              <h4 className="font-medium">No past appointments</h4>
-              <p className="text-sm text-muted-foreground">Your appointment history will appear here.</p>
-            </div>
-          )}
-        </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-6 bg-muted/50 rounded-lg">
+                <Clock className="h-10 w-10 mx-auto text-muted-foreground mb-2" />
+                <h4 className="font-medium">No past appointments</h4>
+                <p className="text-sm text-muted-foreground">Your appointment history will appear here.</p>
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
       </div>
     );
   };
@@ -246,15 +461,23 @@ const DoctorDashboardPage: React.FC = () => {
       <div>
         <Card>
           <CardHeader>
-            <CardTitle>Your Patients</CardTitle>
-            <CardDescription>Manage your patient list</CardDescription>
+            <div className="flex justify-between items-center">
+              <div>
+                <CardTitle>Your Patients</CardTitle>
+                <CardDescription>Manage your patient list</CardDescription>
+              </div>
+              <Button size="sm">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 mr-1"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                Add Patient
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
               <table className="w-full border-collapse">
                 <thead>
                   <tr className="border-b">
-                    <th className="text-left py-3 px-4">Name</th>
+                    <th className="text-left py-3 px-4">Patient</th>
                     <th className="text-left py-3 px-4">Age</th>
                     <th className="text-left py-3 px-4">Last Visit</th>
                     <th className="text-left py-3 px-4">Condition</th>
@@ -264,7 +487,15 @@ const DoctorDashboardPage: React.FC = () => {
                 <tbody>
                   {patients.map((patient) => (
                     <tr key={patient.id} className="border-b">
-                      <td className="py-3 px-4">{patient.name}</td>
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-8 w-8">
+                            <AvatarImage src={patient.avatar || '/placeholder.svg'} />
+                            <AvatarFallback>{patient.name.charAt(0)}</AvatarFallback>
+                          </Avatar>
+                          <span>{patient.name}</span>
+                        </div>
+                      </td>
                       <td className="py-3 px-4">{patient.age}</td>
                       <td className="py-3 px-4">{patient.lastVisit}</td>
                       <td className="py-3 px-4">{patient.condition}</td>
@@ -277,7 +508,10 @@ const DoctorDashboardPage: React.FC = () => {
                           >
                             Prescribe
                           </Button>
-                          <Button size="sm">Message</Button>
+                          <Button size="sm" variant="secondary">
+                            <MessageSquare className="h-4 w-4 mr-1" />
+                            Message
+                          </Button>
                         </div>
                       </td>
                     </tr>
@@ -287,9 +521,331 @@ const DoctorDashboardPage: React.FC = () => {
             </div>
           </CardContent>
         </Card>
+
+        <div className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Recent Medical Records</CardTitle>
+              <CardDescription>View and manage patient records</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {patients.slice(0, 3).map((patient) => (
+                  <div key={`record-${patient.id}`} className="p-4 border rounded-lg">
+                    <div className="flex justify-between">
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={patient.avatar} />
+                          <AvatarFallback>{patient.name.charAt(0)}</AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <h4 className="font-medium">{patient.name}</h4>
+                          <p className="text-sm text-muted-foreground">{patient.condition}</p>
+                        </div>
+                      </div>
+                      <Button size="sm" variant="outline">View Records</Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   };
+
+  const renderAnalyticsContent = () => {
+    // Mock data for analytics
+    const patientsByMonth = [
+      { month: 'Jan', patients: 15 },
+      { month: 'Feb', patients: 22 },
+      { month: 'Mar', patients: 18 },
+      { month: 'Apr', patients: 25 },
+      { month: 'May', patients: 30 },
+    ];
+
+    const satisfactionRatings = [
+      { rating: '5★', percentage: 65 },
+      { rating: '4★', percentage: 25 },
+      { rating: '3★', percentage: 7 },
+      { rating: '2★', percentage: 2 },
+      { rating: '1★', percentage: 1 },
+    ];
+
+    return (
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm text-muted-foreground">Appointments Completed</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {appointments.filter(app => app.status === 'completed').length}
+              </div>
+              <div className="text-xs text-muted-foreground flex items-center mt-1">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 text-green-500 mr-1">
+                  <path fillRule="evenodd" d="M10 17a.75.75 0 01-.75-.75V5.612L5.29 9.77a.75.75 0 01-1.08-1.04l5.25-5.5a.75.75 0 011.08 0l5.25 5.5a.75.75 0 11-1.08 1.04l-3.96-4.158V16.25A.75.75 0 0110 17z" clipRule="evenodd" />
+                </svg>
+                <span>8% increase this month</span>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm text-muted-foreground">Average Rating</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold flex items-center">
+                4.5
+                <span className="text-yellow-500 ml-2 text-lg">★★★★½</span>
+              </div>
+              <div className="text-xs text-muted-foreground mt-1">
+                Based on {appointments.length * 0.8} patient reviews
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm text-muted-foreground">Total Earnings</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                ${appointments.filter(app => app.payment_status === 'paid').reduce((sum, app) => sum + parseFloat(app.amount), 0).toFixed(2)}
+              </div>
+              <div className="text-xs text-muted-foreground flex items-center mt-1">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 text-green-500 mr-1">
+                  <path fillRule="evenodd" d="M10 17a.75.75 0 01-.75-.75V5.612L5.29 9.77a.75.75 0 01-1.08-1.04l5.25-5.5a.75.75 0 011.08 0l5.25 5.5a.75.75 0 11-1.08 1.04l-3.96-4.158V16.25A.75.75 0 0110 17z" clipRule="evenodd" />
+                </svg>
+                <span>12% increase this month</span>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Patient Growth</CardTitle>
+              <CardDescription>New patients over time</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[200px] flex items-end space-x-2">
+                {patientsByMonth.map((data) => (
+                  <div key={data.month} className="flex-1 flex flex-col items-center">
+                    <div 
+                      className="w-full bg-primary/90 rounded-t-md" 
+                      style={{ height: `${(data.patients / 30) * 180}px` }}
+                    ></div>
+                    <div className="mt-2 text-xs">{data.month}</div>
+                    <div className="text-xs text-muted-foreground">{data.patients}</div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader>
+              <CardTitle>Patient Satisfaction</CardTitle>
+              <CardDescription>Rating distribution</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {satisfactionRatings.map((data) => (
+                  <div key={data.rating} className="flex items-center">
+                    <div className="w-12 text-sm">{data.rating}</div>
+                    <div className="flex-1 mx-2">
+                      <div className="h-2 rounded-full bg-secondary">
+                        <div 
+                          className="h-2 rounded-full bg-primary" 
+                          style={{ width: `${data.percentage}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                    <div className="w-8 text-sm text-right">{data.percentage}%</div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+        
+        <Card>
+          <CardHeader>
+            <CardTitle>Appointment Trends</CardTitle>
+            <CardDescription>Appointment distribution by type</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex justify-between items-center">
+              <div className="space-y-1">
+                <h4 className="text-lg font-semibold">
+                  {appointments.filter(app => app.type === 'video').length} Video Consultations
+                </h4>
+                <div className="h-2 w-96 bg-secondary rounded-full">
+                  <div className="h-2 rounded-full bg-blue-500" style={{ width: '65%' }}></div>
+                </div>
+                <p className="text-sm text-muted-foreground">65% of total appointments</p>
+              </div>
+              
+              <div className="space-y-1">
+                <h4 className="text-lg font-semibold">
+                  {appointments.filter(app => app.type === 'chat').length} Chat Consultations
+                </h4>
+                <div className="h-2 w-96 bg-secondary rounded-full">
+                  <div className="h-2 rounded-full bg-green-500" style={{ width: '25%' }}></div>
+                </div>
+                <p className="text-sm text-muted-foreground">25% of total appointments</p>
+              </div>
+              
+              <div className="space-y-1">
+                <h4 className="text-lg font-semibold">
+                  {appointments.filter(app => app.type === 'phone').length} Phone Consultations
+                </h4>
+                <div className="h-2 w-96 bg-secondary rounded-full">
+                  <div className="h-2 rounded-full bg-purple-500" style={{ width: '10%' }}></div>
+                </div>
+                <p className="text-sm text-muted-foreground">10% of total appointments</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  };
+
+  const renderMessagesContent = () => {
+    // Mock data for messages
+    const messages = [
+      {
+        id: 1,
+        sender: 'John Smith',
+        avatar: '/placeholder.svg',
+        message: 'Hello Dr. Johnson, I have a question about my prescription.',
+        time: '10:30 AM',
+        unread: true
+      },
+      {
+        id: 2,
+        sender: 'Jane Doe',
+        avatar: '/placeholder.svg',
+        message: 'Thank you for the consultation yesterday. I feel much better today.',
+        time: 'Yesterday',
+        unread: false
+      },
+      {
+        id: 3,
+        sender: 'Robert Johnson',
+        avatar: '/placeholder.svg',
+        message: 'When can I schedule my follow-up appointment?',
+        time: 'Yesterday',
+        unread: false
+      },
+      {
+        id: 4,
+        sender: 'Maria Garcia',
+        avatar: '/placeholder.svg',
+        message: 'I need to reschedule my appointment for next week.',
+        time: '2 days ago',
+        unread: false
+      }
+    ];
+
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <div className="flex justify-between items-center">
+              <CardTitle>Patient Messages</CardTitle>
+              <Button size="sm">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 mr-2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                New Message
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {messages.map((msg) => (
+                <div key={msg.id} className={`p-4 border rounded-lg ${msg.unread ? 'bg-primary/5 border-primary/20' : ''}`}>
+                  <div className="flex justify-between">
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-10 w-10">
+                        <AvatarImage src={msg.avatar} />
+                        <AvatarFallback>{msg.sender.charAt(0)}</AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-medium">{msg.sender}</h4>
+                          {msg.unread && (
+                            <span className="inline-block bg-primary text-white text-xs px-2 py-0.5 rounded-full">New</span>
+                          )}
+                        </div>
+                        <p className="text-sm text-muted-foreground">{msg.time}</p>
+                      </div>
+                    </div>
+                    <Button size="sm" variant="ghost">Reply</Button>
+                  </div>
+                  <p className="mt-2">{msg.message}</p>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader>
+            <CardTitle>Message Templates</CardTitle>
+            <CardDescription>Quick responses for common inquiries</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="p-3 border rounded-lg">
+                <h4 className="font-medium">Appointment Reminder</h4>
+                <p className="text-sm text-muted-foreground mt-1">
+                  This is a reminder about your appointment scheduled for [DATE] at [TIME]. Please arrive 15 minutes early.
+                </p>
+                <div className="mt-2 flex justify-end">
+                  <Button size="sm" variant="outline">Use Template</Button>
+                </div>
+              </div>
+              
+              <div className="p-3 border rounded-lg">
+                <h4 className="font-medium">Prescription Ready</h4>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Your prescription is ready. You can pick it up at your local pharmacy or view it in your patient portal.
+                </p>
+                <div className="mt-2 flex justify-end">
+                  <Button size="sm" variant="outline">Use Template</Button>
+                </div>
+              </div>
+              
+              <div className="p-3 border rounded-lg">
+                <h4 className="font-medium">Follow-up Instructions</h4>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Thank you for your visit. Please follow these instructions: [INSTRUCTIONS]. Contact me if symptoms persist.
+                </p>
+                <div className="mt-2 flex justify-end">
+                  <Button size="sm" variant="outline">Use Template</Button>
+                </div>
+              </div>
+              
+              <Button className="w-full">Create New Template</Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  };
+
+  // Calculate earnings based on mock data
+  const calculateEarnings = () => {
+    return appointments.filter(app => app.payment_status === 'paid').reduce((sum, app) => sum + parseFloat(app.amount), 0);
+  };
+
+  const totalEarnings = calculateEarnings();
 
   const renderEarningsContent = () => {
     // Monthly data for the graph
@@ -298,18 +854,22 @@ const DoctorDashboardPage: React.FC = () => {
       { month: 'Feb', earnings: 3200 },
       { month: 'Mar', earnings: 2900 },
       { month: 'Apr', earnings: 3450 },
-      { month: 'May', earnings: 0 }, // Current month (projected)
+      { month: 'May', earnings: totalEarnings || 0 }, // Current month
       { month: 'Jun', earnings: 0 }, // Future month
     ];
 
     // Recent payments data
-    const recentPayments = [
-      { id: 'pay1', patient: 'John Smith', amount: 100, date: '2025-04-28', type: 'Video Consultation' },
-      { id: 'pay2', patient: 'Jane Doe', amount: 100, date: '2025-04-25', type: 'Video Consultation' },
-      { id: 'pay3', patient: 'Robert Johnson', amount: 80, date: '2025-04-20', type: 'Chat Consultation' },
-      { id: 'pay4', patient: 'Maria Garcia', amount: 100, date: '2025-04-15', type: 'Video Consultation' },
-      { id: 'pay5', patient: 'David Miller', amount: 70, date: '2025-04-10', type: 'Phone Consultation' },
-    ];
+    const recentPayments = appointments
+      .filter(app => app.payment_status === 'paid')
+      .map(app => ({
+        id: app.id,
+        patient: app.profiles ? `${app.profiles.first_name} ${app.profiles.last_name}` : 'Patient',
+        amount: parseFloat(app.amount),
+        date: app.date,
+        type: `${app.type.charAt(0).toUpperCase() + app.type.slice(1)} Consultation`
+      }))
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .slice(0, 5);
 
     return (
       <div className="space-y-6">
@@ -319,7 +879,7 @@ const DoctorDashboardPage: React.FC = () => {
               <CardTitle className="text-sm text-muted-foreground">Total Earnings</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">${totalEarnings}</div>
+              <div className="text-2xl font-bold">${totalEarnings.toFixed(2)}</div>
               <p className="text-xs text-muted-foreground">All time earnings</p>
             </CardContent>
           </Card>
@@ -339,7 +899,7 @@ const DoctorDashboardPage: React.FC = () => {
               <CardTitle className="text-sm text-muted-foreground">Consultations</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">43</div>
+              <div className="text-2xl font-bold">{appointments.length}</div>
               <p className="text-xs text-muted-foreground">Total consultations</p>
             </CardContent>
           </Card>
@@ -378,17 +938,25 @@ const DoctorDashboardPage: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {recentPayments.map((payment) => (
-                <div key={payment.id} className="flex justify-between items-center p-3 border rounded-md">
-                  <div>
-                    <div className="font-medium">{payment.patient}</div>
-                    <div className="text-sm text-muted-foreground flex items-center">
-                      {payment.type} · {payment.date}
+              {recentPayments.length > 0 ? (
+                recentPayments.map((payment) => (
+                  <div key={payment.id} className="flex justify-between items-center p-3 border rounded-md">
+                    <div>
+                      <div className="font-medium">{payment.patient}</div>
+                      <div className="text-sm text-muted-foreground flex items-center">
+                        {payment.type} · {new Date(payment.date).toLocaleDateString()}
+                      </div>
                     </div>
+                    <div className="text-lg font-semibold">${payment.amount.toFixed(2)}</div>
                   </div>
-                  <div className="text-lg font-semibold">${payment.amount}</div>
+                ))
+              ) : (
+                <div className="text-center py-6 bg-muted/50 rounded-lg">
+                  <DollarSign className="h-10 w-10 mx-auto text-muted-foreground mb-2" />
+                  <h4 className="font-medium">No payments yet</h4>
+                  <p className="text-sm text-muted-foreground">Your payment history will appear here.</p>
                 </div>
-              ))}
+              )}
             </div>
           </CardContent>
         </Card>
@@ -448,6 +1016,10 @@ const DoctorDashboardPage: React.FC = () => {
             onComplete={() => {
               setShowPrescriptionForm(false);
               setSelectedPatient(null);
+              toast({
+                title: "Prescription Created",
+                description: "Prescription has been created successfully.",
+              });
             }}
           />
         ) : showPrescriptionForm ? (
@@ -455,12 +1027,138 @@ const DoctorDashboardPage: React.FC = () => {
             patientName="New Patient"
             patientId="new"
             appointmentId={0}
-            onComplete={() => setShowPrescriptionForm(false)}
+            onComplete={() => {
+              setShowPrescriptionForm(false);
+              toast({
+                title: "Prescription Created",
+                description: "Prescription has been created successfully.",
+              });
+            }}
           />
         ) : (
           <PrescriptionsList userId={user.id} userRole="doctor" />
         )}
       </div>
+    );
+  };
+
+  const renderSettingsContent = () => {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Account Settings</CardTitle>
+          <CardDescription>Manage your account preferences</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div>
+            <h3 className="font-medium mb-3">Practice Information</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium block mb-1">Specialty</label>
+                <input 
+                  type="text"
+                  defaultValue={doctorDetails?.specialty || "General Medicine"}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium block mb-1">Years of Experience</label>
+                <input 
+                  type="number"
+                  defaultValue={doctorDetails?.experience || 5}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium block mb-1">Consultation Fee</label>
+                <input 
+                  type="text"
+                  defaultValue={doctorDetails?.consultation_fee || "100.00"}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium block mb-1">Phone</label>
+                <input 
+                  type="tel"
+                  defaultValue={doctorDetails?.phone || "+1 (555) 123-4567"}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                />
+              </div>
+            </div>
+          </div>
+          
+          <Separator />
+          
+          <div>
+            <h3 className="font-medium mb-3">Notification Preferences</h3>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="font-medium text-sm">Email Notifications</div>
+                  <div className="text-xs text-muted-foreground">
+                    Receive emails about appointments and updates
+                  </div>
+                </div>
+                <input type="checkbox" defaultChecked className="toggle" />
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="font-medium text-sm">SMS Notifications</div>
+                  <div className="text-xs text-muted-foreground">
+                    Receive text messages for appointment reminders
+                  </div>
+                </div>
+                <input type="checkbox" defaultChecked className="toggle" />
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="font-medium text-sm">Browser Notifications</div>
+                  <div className="text-xs text-muted-foreground">
+                    Receive notifications when patients message you
+                  </div>
+                </div>
+                <input type="checkbox" defaultChecked className="toggle" />
+              </div>
+            </div>
+          </div>
+          
+          <Separator />
+          
+          <div>
+            <h3 className="font-medium mb-3">Availability Settings</h3>
+            <div className="grid grid-cols-7 gap-2 mb-4">
+              {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => (
+                <div key={day} className="text-center">
+                  <div className="text-sm font-medium mb-1">{day}</div>
+                  <Button
+                    variant={day === 'Sat' || day === 'Sun' ? 'outline' : 'default'}
+                    size="sm"
+                    className="w-full"
+                  >
+                    {day === 'Sat' || day === 'Sun' ? 'Off' : 'On'}
+                  </Button>
+                </div>
+              ))}
+            </div>
+            <Button variant="outline">Configure Working Hours</Button>
+          </div>
+          
+          <Separator />
+          
+          <div>
+            <h3 className="font-medium mb-3">Password</h3>
+            <Button variant="outline">Change Password</Button>
+          </div>
+          
+          <Separator />
+          
+          <div>
+            <h3 className="font-medium mb-3 text-destructive">Danger Zone</h3>
+            <Button variant="destructive">Delete Account</Button>
+          </div>
+        </CardContent>
+      </Card>
     );
   };
 
@@ -473,55 +1171,13 @@ const DoctorDashboardPage: React.FC = () => {
       case 'earnings':
         return renderEarningsContent();
       case 'prescriptions':
-        return renderPrescriptionsContent();  
+        return renderPrescriptionsContent();
+      case 'analytics':
+        return renderAnalyticsContent();
+      case 'messages':
+        return renderMessagesContent();
       case 'settings':
-        return (
-          <Card>
-            <CardHeader>
-              <CardTitle>Account Settings</CardTitle>
-              <CardDescription>Manage your account preferences</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div>
-                <h3 className="font-medium mb-3">Notification Preferences</h3>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="font-medium text-sm">Email Notifications</div>
-                      <div className="text-xs text-muted-foreground">
-                        Receive emails about appointments and updates
-                      </div>
-                    </div>
-                    <input type="checkbox" defaultChecked className="toggle" />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="font-medium text-sm">SMS Notifications</div>
-                      <div className="text-xs text-muted-foreground">
-                        Receive text messages for appointment reminders
-                      </div>
-                    </div>
-                    <input type="checkbox" defaultChecked className="toggle" />
-                  </div>
-                </div>
-              </div>
-              
-              <Separator />
-              
-              <div>
-                <h3 className="font-medium mb-3">Password</h3>
-                <Button variant="outline">Change Password</Button>
-              </div>
-              
-              <Separator />
-              
-              <div>
-                <h3 className="font-medium mb-3 text-destructive">Danger Zone</h3>
-                <Button variant="destructive">Delete Account</Button>
-              </div>
-            </CardContent>
-          </Card>
-        );
+        return renderSettingsContent();
       default:
         return renderAppointmentContent();
     }
@@ -587,6 +1243,28 @@ const DoctorDashboardPage: React.FC = () => {
                 </button>
                 <button
                   className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md ${
+                    activeTab === 'analytics'
+                      ? 'bg-[#8B5CF6] text-white'
+                      : 'hover:bg-white/10 text-white'
+                  }`}
+                  onClick={() => setActiveTab('analytics')}
+                >
+                  <BarChart className="h-4 w-4" />
+                  Analytics
+                </button>
+                <button
+                  className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md ${
+                    activeTab === 'messages'
+                      ? 'bg-[#8B5CF6] text-white'
+                      : 'hover:bg-white/10 text-white'
+                  }`}
+                  onClick={() => setActiveTab('messages')}
+                >
+                  <MessageSquare className="h-4 w-4" />
+                  Messages
+                </button>
+                <button
+                  className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md ${
                     activeTab === 'earnings'
                       ? 'bg-[#8B5CF6] text-white'
                       : 'hover:bg-white/10 text-white'
@@ -604,10 +1282,7 @@ const DoctorDashboardPage: React.FC = () => {
                   }`}
                   onClick={() => setActiveTab('settings')}
                 >
-                  <svg className="h-4 w-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path>
-                    <circle cx="12" cy="12" r="3"></circle>
-                  </svg>
+                  <Settings className="h-4 w-4" />
                   Settings
                 </button>
               </nav>
@@ -628,6 +1303,8 @@ const DoctorDashboardPage: React.FC = () => {
               {activeTab === 'appointments' && 'Appointments'}
               {activeTab === 'patients' && 'Patient Management'}
               {activeTab === 'prescriptions' && 'Prescriptions Management'}
+              {activeTab === 'analytics' && 'Practice Analytics'}
+              {activeTab === 'messages' && 'Patient Messages'}
               {activeTab === 'earnings' && 'Earnings & Payments'}
               {activeTab === 'settings' && 'Account Settings'}
             </h1>

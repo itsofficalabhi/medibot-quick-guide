@@ -9,16 +9,245 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      appointments: {
+        Row: {
+          amount: number
+          created_at: string | null
+          date: string
+          doctor_id: string | null
+          id: string
+          meeting_link: string | null
+          patient_id: string | null
+          payment_id: string | null
+          payment_status: string
+          status: string
+          time: string
+          type: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          date: string
+          doctor_id?: string | null
+          id?: string
+          meeting_link?: string | null
+          patient_id?: string | null
+          payment_id?: string | null
+          payment_status?: string
+          status?: string
+          time: string
+          type: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          date?: string
+          doctor_id?: string | null
+          id?: string
+          meeting_link?: string | null
+          patient_id?: string | null
+          payment_id?: string | null
+          payment_status?: string
+          status?: string
+          time?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointments_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      doctors: {
+        Row: {
+          about: string | null
+          availability: Json | null
+          consultation_fee: number
+          created_at: string | null
+          education: Json | null
+          experience: number
+          id: string
+          is_active: boolean | null
+          languages: string[] | null
+          phone: string | null
+          profile_image: string | null
+          rating: number | null
+          review_count: number | null
+          specialty: string
+          user_id: string | null
+        }
+        Insert: {
+          about?: string | null
+          availability?: Json | null
+          consultation_fee: number
+          created_at?: string | null
+          education?: Json | null
+          experience: number
+          id?: string
+          is_active?: boolean | null
+          languages?: string[] | null
+          phone?: string | null
+          profile_image?: string | null
+          rating?: number | null
+          review_count?: number | null
+          specialty: string
+          user_id?: string | null
+        }
+        Update: {
+          about?: string | null
+          availability?: Json | null
+          consultation_fee?: number
+          created_at?: string | null
+          education?: Json | null
+          experience?: number
+          id?: string
+          is_active?: boolean | null
+          languages?: string[] | null
+          phone?: string | null
+          profile_image?: string | null
+          rating?: number | null
+          review_count?: number | null
+          specialty?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      prescriptions: {
+        Row: {
+          appointment_id: string | null
+          date: string | null
+          diagnosis: string
+          doctor_id: string | null
+          id: string
+          instructions: string | null
+          medicines: Json
+          patient_id: string | null
+        }
+        Insert: {
+          appointment_id?: string | null
+          date?: string | null
+          diagnosis: string
+          doctor_id?: string | null
+          id?: string
+          instructions?: string | null
+          medicines: Json
+          patient_id?: string | null
+        }
+        Update: {
+          appointment_id?: string | null
+          date?: string | null
+          diagnosis?: string
+          doctor_id?: string | null
+          id?: string
+          instructions?: string | null
+          medicines?: Json
+          patient_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prescriptions_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prescriptions_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          address: string | null
+          avatar_url: string | null
+          city: string | null
+          created_at: string | null
+          date_of_birth: string | null
+          first_name: string | null
+          gender: string | null
+          id: string
+          last_name: string | null
+          medical_history: Json | null
+          state: string | null
+          updated_at: string | null
+          zip_code: string | null
+        }
+        Insert: {
+          address?: string | null
+          avatar_url?: string | null
+          city?: string | null
+          created_at?: string | null
+          date_of_birth?: string | null
+          first_name?: string | null
+          gender?: string | null
+          id: string
+          last_name?: string | null
+          medical_history?: Json | null
+          state?: string | null
+          updated_at?: string | null
+          zip_code?: string | null
+        }
+        Update: {
+          address?: string | null
+          avatar_url?: string | null
+          city?: string | null
+          created_at?: string | null
+          date_of_birth?: string | null
+          first_name?: string | null
+          gender?: string | null
+          id?: string
+          last_name?: string | null
+          medical_history?: Json | null
+          state?: string | null
+          updated_at?: string | null
+          zip_code?: string | null
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _user_id: string
+          _role: Database["public"]["Enums"]["app_role"]
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "doctor" | "patient"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -133,6 +362,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "doctor", "patient"],
+    },
   },
 } as const

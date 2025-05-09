@@ -7,6 +7,7 @@ import ChatMessage, { MessageType } from './ChatMessage';
 import { getResponseWithDelay } from '@/utils/chatUtils';
 import DisclaimerBanner from './DisclaimerBanner';
 import { Bot } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
 
 interface Message {
   id: number;
@@ -26,11 +27,34 @@ const ChatInterface: React.FC = () => {
   ]);
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [isConnected, setIsConnected] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Check if the connection to the backend is active
+  useEffect(() => {
+    const checkConnection = async () => {
+      try {
+        // Simple ping to check if the API is available
+        await fetch(import.meta.env.VITE_API_URL || 'http://localhost:5000/api', {
+          method: 'HEAD',
+          cache: 'no-cache'
+        });
+        setIsConnected(true);
+      } catch (error) {
+        console.error('API connection check failed:', error);
+        setIsConnected(false);
+      }
+    };
+    
+    checkConnection();
+    const interval = setInterval(checkConnection, 60000); // Check every minute
+    
+    return () => clearInterval(interval);
+  }, []);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -38,6 +62,15 @@ const ChatInterface: React.FC = () => {
 
   const handleSendMessage = () => {
     if (inputValue.trim() === '') return;
+
+    if (!isConnected) {
+      toast({
+        title: "Connection Error",
+        description: "You appear to be offline. Please check your connection and try again.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     const userMessage: Message = {
       id: messages.length + 1,
@@ -77,6 +110,9 @@ const ChatInterface: React.FC = () => {
         <CardTitle className="flex items-center">
           <Bot className="h-6 w-6 mr-2" />
           MediBot - AI Health Assistant
+          {!isConnected && (
+            <span className="ml-auto text-sm bg-red-600 py-1 px-2 rounded-full">Offline</span>
+          )}
         </CardTitle>
       </CardHeader>
       <CardContent className="p-4">
@@ -111,12 +147,12 @@ const ChatInterface: React.FC = () => {
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyPress={handleKeyPress}
-            disabled={isTyping}
+            disabled={isTyping || !isConnected}
             className="flex-1"
           />
           <Button 
             onClick={handleSendMessage} 
-            disabled={isTyping || inputValue.trim() === ''}
+            disabled={isTyping || inputValue.trim() === '' || !isConnected}
             className="bg-primary hover:bg-primary/90"
           >
             Send

@@ -1,5 +1,6 @@
 
 import { chatAPI } from '@/services/api';
+import { toast } from '@/hooks/use-toast';
 
 // Function to process user input and get AI response
 export const processUserInput = async (userInput: string): Promise<string> => {
@@ -8,6 +9,11 @@ export const processUserInput = async (userInput: string): Promise<string> => {
     return response.data.response;
   } catch (error) {
     console.error('Error processing message with AI:', error);
+    toast({
+      title: "Connection Error",
+      description: "Could not connect to the chat service. Please try again later.",
+      variant: "destructive",
+    });
     return getFallbackResponse();
   }
 };
@@ -34,13 +40,19 @@ export const getResponseWithDelay = async (
   setTyping(true);
   
   try {
-    // Calculate a realistic typing delay based on response length
-    setTimeout(async () => {
-      const response = await processUserInput(userInput);
-      setTyping(false);
-      callback(response);
-    }, 1500); // Fixed delay for better UX
+    // Use a more reliable approach with Promise
+    const responsePromise = processUserInput(userInput);
+    
+    // Set a minimum delay for better UX
+    const delay = new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Wait for both the API response and the minimum delay
+    const [response] = await Promise.all([responsePromise, delay]);
+    
+    setTyping(false);
+    callback(response);
   } catch (error) {
+    console.error('Error in getResponseWithDelay:', error);
     setTyping(false);
     callback(getFallbackResponse());
   }

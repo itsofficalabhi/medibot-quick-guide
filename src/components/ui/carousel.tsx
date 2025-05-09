@@ -1,6 +1,9 @@
+
 import * as React from "react"
 import useEmblaCarousel, {
   type UseEmblaCarouselType,
+  type EmblaOptionsType as OptionsType,
+  type EmblaPluginType as CarouselPlugin,
 } from "embla-carousel-react"
 import { ArrowLeft, ArrowRight } from "lucide-react"
 
@@ -10,11 +13,10 @@ import { Button } from "@/components/ui/button"
 type CarouselApi = UseEmblaCarouselType[1]
 type UseCarouselParameters = Parameters<typeof useEmblaCarousel>
 type CarouselOptions = UseCarouselParameters[0]
-type CarouselPlugin = UseCarouselParameters[1]
 
 type CarouselProps = {
   opts?: CarouselOptions
-  plugins?: CarouselPlugin
+  plugins?: CarouselPlugin[]
   orientation?: "horizontal" | "vertical"
   setApi?: (api: CarouselApi) => void
   autoplay?: boolean
@@ -69,7 +71,7 @@ const Carousel = React.forwardRef<
     },
     ref
   ) => {
-    const options = {
+    const options: OptionsType = {
       ...opts,
       axis: orientation === "horizontal" ? "x" : "y",
       loop: marquee || opts?.loop,
@@ -192,8 +194,7 @@ const Carousel = React.forwardRef<
           carouselRef,
           api: api,
           opts: options,
-          orientation:
-            orientation || (opts?.axis === "y" ? "vertical" : "horizontal"),
+          orientation,
           scrollPrev,
           scrollNext,
           canScrollPrev,

@@ -16,6 +16,15 @@ informative, and user-friendly.`;
 
 // Health check endpoint to verify service availability
 router.get('/health', (req, res) => {
+  // Check if OpenAI API key is configured
+  if (!OPENAI_API_KEY) {
+    return res.status(503).json({ 
+      status: 'error', 
+      message: 'OpenAI API key not configured',
+      details: 'The chat service is not properly configured'
+    });
+  }
+  
   res.status(200).json({ status: 'ok', message: 'Chat service is operational' });
 });
 
@@ -29,7 +38,7 @@ router.post('/openai', async (req, res) => {
     }
     
     if (!OPENAI_API_KEY) {
-      return res.status(500).json({ 
+      return res.status(503).json({ 
         error: 'OpenAI API key not configured', 
         response: 'I apologize, but my AI services are currently unavailable. Please try again later.' 
       });
@@ -62,13 +71,19 @@ router.post('/openai', async (req, res) => {
     
     // Provide more detailed error information for debugging
     let errorMessage = 'I apologize, but I encountered an issue processing your question.';
+    let statusCode = error.response?.status || 500;
+    
     if (error.code === 'ECONNABORTED') {
       errorMessage += ' The request timed out. Please try again later.';
-    } else if (error.response && error.response.status === 429) {
+    } else if (error.response?.status === 429) {
       errorMessage += ' The service is currently experiencing high demand. Please try again in a few minutes.';
+      statusCode = 429;
+    } else if (error.response?.status === 401) {
+      errorMessage += ' There was an authentication issue with the AI service.';
+      statusCode = 401;
     }
     
-    res.status(error.response?.status || 500).json({ 
+    res.status(statusCode).json({ 
       error: 'Failed to process request with OpenAI',
       errorDetails: error.response?.data || error.message,
       response: errorMessage

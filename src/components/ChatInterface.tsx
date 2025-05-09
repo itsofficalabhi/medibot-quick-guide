@@ -4,10 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import ChatMessage, { MessageType } from './ChatMessage';
-import { getResponseWithDelay } from '@/utils/chatUtils';
+import { getResponseWithDelay, checkApiConnection } from '@/utils/chatUtils';
 import DisclaimerBanner from './DisclaimerBanner';
-import { Bot } from 'lucide-react';
+import { Bot, WifiOff } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface Message {
   id: number;
@@ -28,7 +29,22 @@ const ChatInterface: React.FC = () => {
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [isConnected, setIsConnected] = useState(true);
+  const [isCheckingConnection, setIsCheckingConnection] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  // Function to verify connection and update state
+  const verifyConnection = async () => {
+    setIsCheckingConnection(true);
+    const connectionStatus = await checkApiConnection();
+    setIsConnected(connectionStatus);
+    setIsCheckingConnection(false);
+    
+    if (!connectionStatus) {
+      console.log("Chat service is offline");
+    } else {
+      console.log("Chat service is online");
+    }
+  };
 
   useEffect(() => {
     scrollToBottom();
@@ -36,28 +52,27 @@ const ChatInterface: React.FC = () => {
 
   // Check if the connection to the backend is active
   useEffect(() => {
-    const checkConnection = async () => {
-      try {
-        // Simple ping to check if the API is available
-        await fetch(import.meta.env.VITE_API_URL || 'http://localhost:5000/api', {
-          method: 'HEAD',
-          cache: 'no-cache'
-        });
-        setIsConnected(true);
-      } catch (error) {
-        console.error('API connection check failed:', error);
-        setIsConnected(false);
-      }
-    };
+    verifyConnection();
     
-    checkConnection();
-    const interval = setInterval(checkConnection, 60000); // Check every minute
+    const interval = setInterval(() => {
+      verifyConnection();
+    }, 60000); // Check every minute
     
     return () => clearInterval(interval);
   }, []);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+  
+  // Retry connection
+  const handleRetryConnection = () => {
+    toast({
+      title: "Reconnecting...",
+      description: "Attempting to reconnect to the chat service.",
+    });
+    
+    verifyConnection();
   };
 
   const handleSendMessage = () => {
@@ -110,13 +125,31 @@ const ChatInterface: React.FC = () => {
         <CardTitle className="flex items-center">
           <Bot className="h-6 w-6 mr-2" />
           MediBot - AI Health Assistant
-          {!isConnected && (
-            <span className="ml-auto text-sm bg-red-600 py-1 px-2 rounded-full">Offline</span>
+          {isCheckingConnection ? (
+            <span className="ml-auto text-sm bg-yellow-600 py-1 px-2 rounded-full">Checking connection...</span>
+          ) : !isConnected ? (
+            <span className="ml-auto text-sm bg-red-600 py-1 px-2 rounded-full flex items-center">
+              <WifiOff className="h-3 w-3 mr-1" />Offline
+            </span>
+          ) : (
+            <span className="ml-auto text-sm bg-green-600 py-1 px-2 rounded-full">Online</span>
           )}
         </CardTitle>
       </CardHeader>
       <CardContent className="p-4">
         <DisclaimerBanner />
+        
+        {!isConnected && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertDescription className="flex items-center justify-between">
+              <span>The chat service is currently offline. Your messages won't be processed.</span>
+              <Button variant="outline" size="sm" onClick={handleRetryConnection}>
+                Retry Connection
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+        
         <div className="chat-container h-[400px] overflow-y-auto p-2 mb-2 border rounded-md">
           {messages.map(message => (
             <ChatMessage
@@ -143,7 +176,7 @@ const ChatInterface: React.FC = () => {
       <CardFooter className="border-t p-4">
         <div className="flex w-full space-x-2">
           <Input
-            placeholder="Ask a health question..."
+            placeholder={isConnected ? "Ask a health question..." : "Chat is offline..."}
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyPress={handleKeyPress}

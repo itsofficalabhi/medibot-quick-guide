@@ -65,8 +65,7 @@ const HomePage: React.FC = () => {
           <Carousel
             opts={{ align: "start" }}
             autoplay={true} // Enable autoplay
-            autoplayInterval={5000} // 5 seconds per slide
-            pauseBetweenSlides={2000} // 2 second pause between slides
+            interval={5000} // 5 seconds per slide
             className="w-full mx-auto"
           >
             <CarouselContent>
@@ -270,8 +269,7 @@ const HomePage: React.FC = () => {
           <Carousel
             opts={{ align: "start" }}
             autoplay={true} // Enable autoplay
-            autoplayInterval={4000} // 4 seconds per slide
-            pauseBetweenSlides={2000} // 2 second pause between slides
+            interval={4000} // 4 seconds per slide
             className="w-full"
           >
             <CarouselContent>

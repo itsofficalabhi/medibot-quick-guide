@@ -2,6 +2,8 @@
 import * as React from "react"
 import useEmblaCarousel, {
   type UseEmblaCarouselType,
+  type EmblaOptionsType,
+  type EmblaPluginType,
 } from "embla-carousel-react"
 import { ArrowLeft, ArrowRight } from "lucide-react"
 
@@ -10,12 +12,10 @@ import { Button } from "@/components/ui/button"
 
 type CarouselApi = UseEmblaCarouselType[1]
 type UseCarouselParameters = Parameters<typeof useEmblaCarousel>
-type CarouselOptions = UseCarouselParameters[0]
-type CarouselPlugin = UseCarouselParameters[1]
 
 type CarouselProps = {
-  opts?: CarouselOptions
-  plugins?: CarouselPlugin[]
+  opts?: EmblaOptionsType
+  plugins?: EmblaPluginType[]
   orientation?: "horizontal" | "vertical"
   setApi?: (api: CarouselApi) => void
   autoplay?: boolean
@@ -28,7 +28,7 @@ type CarouselProps = {
 type CarouselContextProps = {
   carouselRef: ReturnType<typeof React.useRef<HTMLDivElement>>
   api: ReturnType<typeof useEmblaCarousel>[1]
-  opts: CarouselOptions
+  opts: EmblaOptionsType
   orientation: Exclude<CarouselProps["orientation"], undefined>
   scrollPrev: () => void
   scrollNext: () => void
@@ -69,12 +69,24 @@ const Carousel = React.forwardRef<
     },
     ref
   ) => {
-    const options = {
+    const options: EmblaOptionsType = {
       ...opts,
       axis: orientation === "horizontal" ? "x" : "y",
       loop: marquee || opts?.loop,
-      draggable: marquee ? false : opts?.draggable ?? true,
-      dragFree: marquee ? true : opts?.dragFree ?? false,
+    }
+    
+    // Add dragFree and draggable properties only if they exist in opts or marquee is set
+    if (marquee) {
+      options.draggable = false
+      options.dragFree = true
+    } else {
+      // Only set these if they're in the original opts or undefined
+      if ('draggable' in (opts || {})) {
+        options.draggable = opts?.draggable
+      }
+      if ('dragFree' in (opts || {})) {
+        options.dragFree = opts?.dragFree
+      }
     }
 
     const carouselRef = React.useRef<HTMLDivElement>(null)

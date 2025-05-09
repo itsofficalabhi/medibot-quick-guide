@@ -11,8 +11,14 @@ import { Button } from "@/components/ui/button"
 type CarouselApi = UseEmblaCarouselType[1]
 type UseCarouselParameters = Parameters<typeof useEmblaCarousel>
 
+// Extended options type to include draggable and dragFree properties
+type ExtendedEmblaOptionsType = EmblaOptionsType & {
+  draggable?: boolean;
+  dragFree?: boolean;
+}
+
 type CarouselProps = {
-  opts?: EmblaOptionsType
+  opts?: ExtendedEmblaOptionsType
   plugins?: EmblaPluginType[]
   orientation?: "horizontal" | "vertical"
   setApi?: (api: CarouselApi) => void
@@ -26,7 +32,7 @@ type CarouselProps = {
 type CarouselContextProps = {
   carouselRef: ReturnType<typeof React.useRef<HTMLDivElement>>
   api: ReturnType<typeof useEmblaCarousel>[1]
-  opts: EmblaOptionsType
+  opts: ExtendedEmblaOptionsType
   orientation: Exclude<CarouselProps["orientation"], undefined>
   scrollPrev: () => void
   scrollNext: () => void
@@ -67,7 +73,7 @@ const Carousel = React.forwardRef<
     },
     ref
   ) => {
-    const options: EmblaOptionsType = {
+    const options: ExtendedEmblaOptionsType = {
       ...opts,
       axis: orientation === "horizontal" ? "x" : "y",
       loop: marquee || opts?.loop,
@@ -79,16 +85,17 @@ const Carousel = React.forwardRef<
       options.dragFree = true
     } else {
       // Only set these if they're in the original opts or undefined
-      if ('draggable' in (opts || {})) {
-        options.draggable = opts?.draggable
+      if (opts && 'draggable' in opts) {
+        options.draggable = opts.draggable
       }
-      if ('dragFree' in (opts || {})) {
-        options.dragFree = opts?.dragFree
+      if (opts && 'dragFree' in opts) {
+        options.dragFree = opts.dragFree
       }
     }
 
     const carouselRef = React.useRef<HTMLDivElement>(null)
-    const [emblaRef, emblaApi] = useEmblaCarousel(options, plugins)
+    // Cast to any to bypass TypeScript checking since we're handling the extended options
+    const [emblaRef, emblaApi] = useEmblaCarousel(options as any, plugins)
     const [canScrollPrev, setCanScrollPrev] = React.useState(false)
     const [canScrollNext, setCanScrollNext] = React.useState(false)
 

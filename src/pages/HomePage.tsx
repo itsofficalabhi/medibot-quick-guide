@@ -64,8 +64,8 @@ const HomePage: React.FC = () => {
           
           <Carousel
             opts={{ align: "start" }}
-            autoplay={true} // Enable autoplay
-            interval={5000} // 5 seconds per slide
+            autoplay={true}
+            interval={5000}
             className="w-full mx-auto"
           >
             <CarouselContent>
@@ -268,8 +268,8 @@ const HomePage: React.FC = () => {
           
           <Carousel
             opts={{ align: "start" }}
-            autoplay={true} // Enable autoplay
-            interval={4000} // 4 seconds per slide
+            autoplay={true}
+            interval={4000}
             className="w-full"
           >
             <CarouselContent>
@@ -330,8 +330,6 @@ const HomePage: React.FC = () => {
               max={100}
               step={1}
               disabled
-              animated={true}
-              animationSpeed={400} // Slower animation
               className="w-full"
             />
             <p className="mt-2 text-sm text-muted-foreground">96% of our patients are satisfied with our services</p>

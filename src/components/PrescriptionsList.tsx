@@ -16,7 +16,7 @@ interface Prescription {
   id: string;
   patientName: string;
   patientId: string;
-  appointmentId: number;
+  appointmentId?: number;
   diagnosis: string;
   medicines: Medicine[];
   instructions: string;
@@ -151,7 +151,10 @@ const PrescriptionsList: React.FC<PrescriptionsListProps> = ({ userId, userRole 
             <div className="p-4 bg-card border-b">
               <div className="flex justify-between items-start">
                 <div>
-                  <h3 className="font-medium">Prescription for {prescription.patientName}</h3>
+                  <h3 className="font-medium">
+                    Prescription for {prescription.patientName}
+                    {prescription.patientId && <span className="text-xs text-muted-foreground ml-2">ID: {prescription.patientId}</span>}
+                  </h3>
                   <p className="text-sm text-muted-foreground">
                     {new Date(prescription.date).toLocaleDateString()}
                   </p>

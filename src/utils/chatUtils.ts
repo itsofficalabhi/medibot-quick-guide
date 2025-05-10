@@ -1,10 +1,51 @@
 
 import { chatAPI } from '@/services/api';
 import { toast } from '@/hooks/use-toast';
+import { faqList, emergencyKeywords, emergencyResponses, fallbackResponses } from '@/data/faqData';
+
+// Check for emergency keywords in user input
+const checkForEmergency = (userInput: string): string | null => {
+  const normalizedInput = userInput.toLowerCase();
+  
+  for (const keyword of emergencyKeywords) {
+    if (normalizedInput.includes(keyword)) {
+      // Return random emergency response
+      return emergencyResponses[Math.floor(Math.random() * emergencyResponses.length)];
+    }
+  }
+  
+  return null;
+};
+
+// Check for FAQ matches
+const checkForFAQMatch = (userInput: string): string | null => {
+  const normalizedInput = userInput.toLowerCase();
+  
+  for (const faq of faqList) {
+    const isMatch = faq.keywords.some(keyword => normalizedInput.includes(keyword.toLowerCase()));
+    if (isMatch) {
+      return faq.answer;
+    }
+  }
+  
+  return null;
+};
 
 // Function to process user input and get AI response
 export const processUserInput = async (userInput: string): Promise<string> => {
   try {
+    // Check for emergency keywords first
+    const emergencyResponse = checkForEmergency(userInput);
+    if (emergencyResponse) {
+      return emergencyResponse;
+    }
+    
+    // Check FAQ for quick responses to common questions
+    const faqResponse = checkForFAQMatch(userInput);
+    if (faqResponse) {
+      return faqResponse;
+    }
+    
     const response = await chatAPI.sendMessage(userInput);
     
     if (response.data.error) {
@@ -31,32 +72,32 @@ export const processUserInput = async (userInput: string): Promise<string> => {
 
 // Get a fallback response when API fails
 export const getFallbackResponse = (): string => {
-  const fallbackResponses = [
-    "I'm having trouble connecting to my knowledge base. Can you try again in a moment?",
-    "It seems there's a technical issue. Please try again shortly.",
-    "I apologize, but I'm unable to process your request right now. Please try again later.",
-    "My connection to the medical database seems to be interrupted. Let me try to reconnect."
-  ];
-  
-  const randomIndex = Math.floor(Math.random() * fallbackResponses.length);
-  return fallbackResponses[randomIndex];
+  return fallbackResponses[Math.floor(Math.random() * fallbackResponses.length)];
 };
 
 // Check if the API server is available
 export const checkApiConnection = async (): Promise<boolean> => {
   try {
     const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+    console.log('Checking API connection at:', apiUrl);
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    
     const response = await fetch(`${apiUrl}/chat/health`, { 
       method: 'GET',
       cache: 'no-cache',
       headers: {
         'Content-Type': 'application/json',
       },
-      timeout: 5000 // 5 seconds timeout
-    } as RequestInit & { timeout: number });
+      signal: controller.signal
+    });
+    
+    clearTimeout(timeoutId);
     
     if (response.ok) {
       const data = await response.json();
+      console.log('API connection check result:', data);
       return data.status === 'ok';
     }
     return false;
@@ -75,20 +116,20 @@ export const getResponseWithDelay = async (
   setTyping(true);
   
   try {
-    // Use a more reliable approach with Promise
+    // Use a more reliable approach with Promise.race for timeout
     const responsePromise = processUserInput(userInput);
     
     // Set a minimum delay for better UX
     const delay = new Promise(resolve => setTimeout(resolve, 1000));
     
     // Set a timeout for the response
-    const timeout = new Promise<string>((_, reject) => 
+    const timeoutPromise = new Promise<string>((_, reject) => 
       setTimeout(() => reject(new Error('Request timed out')), 15000)
     );
     
     // Wait for both the API response and the minimum delay
     const [response] = await Promise.all([
-      Promise.race([responsePromise, timeout]), 
+      Promise.race([responsePromise, timeoutPromise]), 
       delay
     ]);
     

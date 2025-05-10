@@ -12,7 +12,7 @@ const SYSTEM_PROMPT = `You are MediBot, an AI health assistant for MediClinic.
 Provide helpful, accurate health information but always remind users that you're not 
 a substitute for professional medical advice. If someone describes emergency symptoms, 
 urgently advise them to seek immediate medical attention. Keep responses concise, 
-informative, and user-friendly.`;
+informative, and user-friendly. Use the FAQs and medical terminology to provide accurate information.`;
 
 // Health check endpoint to verify service availability
 router.get('/health', (req, res) => {
@@ -44,6 +44,8 @@ router.post('/openai', async (req, res) => {
       });
     }
 
+    console.log('Processing message with OpenAI:', message);
+
     const response = await axios.post(
       OPENAI_API_URL,
       {
@@ -52,7 +54,7 @@ router.post('/openai', async (req, res) => {
           { role: 'system', content: SYSTEM_PROMPT },
           { role: 'user', content: message }
         ],
-        max_tokens: 300,
+        max_tokens: 500,
         temperature: 0.7
       },
       {
@@ -60,11 +62,13 @@ router.post('/openai', async (req, res) => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${OPENAI_API_KEY}`
         },
-        timeout: 10000 // 10 seconds timeout
+        timeout: 15000 // 15 seconds timeout
       }
     );
 
     const aiResponse = response.data.choices[0].message.content;
+    console.log('OpenAI response received:', aiResponse.substring(0, 50) + '...');
+    
     res.json({ response: aiResponse });
   } catch (error) {
     console.error('OpenAI API error:', error.response?.data || error.message);

@@ -22,9 +22,13 @@ app.use(express.json());
 app.use(cors());
 
 // Connect to MongoDB
+console.log('Connecting to MongoDB...');
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/mediclinic')
   .then(() => console.log('MongoDB connected successfully'))
   .catch(err => console.error('MongoDB connection error:', err));
+
+// Log OpenAI API key status (just if it's set or not, never log the actual key)
+console.log('OpenAI API Key is', process.env.OPENAI_API_KEY ? 'configured' : 'not configured');
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -36,6 +40,15 @@ app.use('/api/chat', chatRoutes);
 // Basic route
 app.get('/', (req, res) => {
   res.send('MediClinic API is running');
+});
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({ 
+    status: 'ok', 
+    message: 'MediClinic API is operational',
+    mongodb: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
+  });
 });
 
 // Start server

@@ -6,7 +6,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import ChatMessage, { MessageType } from './ChatMessage';
 import { getResponseWithDelay, checkApiConnection } from '@/utils/chatUtils';
 import DisclaimerBanner from './DisclaimerBanner';
-import { Bot, WifiOff } from 'lucide-react';
+import { Bot, WifiOff, RefreshCw } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
@@ -30,19 +30,28 @@ const ChatInterface: React.FC = () => {
   const [isTyping, setIsTyping] = useState(false);
   const [isConnected, setIsConnected] = useState(true);
   const [isCheckingConnection, setIsCheckingConnection] = useState(true);
+  const [connectionRetries, setConnectionRetries] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
   // Function to verify connection and update state
   const verifyConnection = async () => {
     setIsCheckingConnection(true);
-    const connectionStatus = await checkApiConnection();
-    setIsConnected(connectionStatus);
-    setIsCheckingConnection(false);
-    
-    if (!connectionStatus) {
-      console.log("Chat service is offline");
-    } else {
-      console.log("Chat service is online");
+    try {
+      const connectionStatus = await checkApiConnection();
+      setIsConnected(connectionStatus);
+      
+      if (!connectionStatus) {
+        console.log("Chat service is offline");
+      } else {
+        console.log("Chat service is online");
+        // Reset retry count when connection is successful
+        setConnectionRetries(0);
+      }
+    } catch (error) {
+      console.error("Error checking connection:", error);
+      setIsConnected(false);
+    } finally {
+      setIsCheckingConnection(false);
     }
   };
 
@@ -65,14 +74,21 @@ const ChatInterface: React.FC = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
   
-  // Retry connection
+  // Retry connection with exponential backoff
   const handleRetryConnection = () => {
+    const retryCount = connectionRetries + 1;
+    setConnectionRetries(retryCount);
+    
+    const backoffTime = Math.min(2000 * Math.pow(2, retryCount - 1), 30000); // Max 30 seconds
+    
     toast({
       title: "Reconnecting...",
-      description: "Attempting to reconnect to the chat service.",
+      description: `Attempting to reconnect to the chat service. Attempt ${retryCount}`,
     });
     
-    verifyConnection();
+    setTimeout(() => {
+      verifyConnection();
+    }, backoffTime);
   };
 
   const handleSendMessage = () => {
@@ -122,11 +138,15 @@ const ChatInterface: React.FC = () => {
   return (
     <Card className="w-full max-w-3xl mx-auto">
       <CardHeader className="bg-primary text-white">
-        <CardTitle className="flex items-center">
-          <Bot className="h-6 w-6 mr-2" />
-          MediBot - AI Health Assistant
+        <CardTitle className="flex items-center justify-between">
+          <div className="flex items-center">
+            <Bot className="h-6 w-6 mr-2" />
+            MediBot - AI Health Assistant
+          </div>
           {isCheckingConnection ? (
-            <span className="ml-auto text-sm bg-yellow-600 py-1 px-2 rounded-full">Checking connection...</span>
+            <span className="ml-auto text-sm bg-yellow-600 py-1 px-2 rounded-full flex items-center">
+              <RefreshCw className="h-3 w-3 mr-1 animate-spin" />Checking...
+            </span>
           ) : !isConnected ? (
             <span className="ml-auto text-sm bg-red-600 py-1 px-2 rounded-full flex items-center">
               <WifiOff className="h-3 w-3 mr-1" />Offline
@@ -143,8 +163,24 @@ const ChatInterface: React.FC = () => {
           <Alert variant="destructive" className="mb-4">
             <AlertDescription className="flex items-center justify-between">
               <span>The chat service is currently offline. Your messages won't be processed.</span>
-              <Button variant="outline" size="sm" onClick={handleRetryConnection}>
-                Retry Connection
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleRetryConnection}
+                disabled={isCheckingConnection}
+                className="flex items-center gap-1"
+              >
+                {isCheckingConnection ? (
+                  <>
+                    <RefreshCw className="h-3 w-3 animate-spin mr-1" />
+                    Checking...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="h-3 w-3 mr-1" />
+                    Retry Connection
+                  </>
+                )}
               </Button>
             </AlertDescription>
           </Alert>

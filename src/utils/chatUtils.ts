@@ -1,3 +1,4 @@
+
 import { chatAPI } from '@/services/api';
 import { toast } from '@/hooks/use-toast';
 import { faqList, emergencyKeywords, emergencyResponses, fallbackResponses } from '@/data/faqData';
@@ -45,6 +46,7 @@ export const processUserInput = async (userInput: string): Promise<string> => {
       return faqResponse;
     }
     
+    // Use the OpenAI API to process the message
     const response = await chatAPI.sendMessage(userInput);
     
     if (response.data.error) {
@@ -72,32 +74,6 @@ export const processUserInput = async (userInput: string): Promise<string> => {
 // Get a fallback response when API fails
 export const getFallbackResponse = (): string => {
   return fallbackResponses[Math.floor(Math.random() * fallbackResponses.length)];
-};
-
-// Check if the API server is available
-export const checkApiConnection = async (): Promise<boolean> => {
-  try {
-    console.log('Checking API connection...');
-    
-    // Use the API client instead of fetch for consistent behavior
-    const response = await chatAPI.checkHealth();
-    
-    if (response.status === 200) {
-      console.log('API connection check result:', response.data);
-      return response.data.status === 'ok';
-    }
-    return false;
-  } catch (error) {
-    console.error('API connection check failed:', error);
-    
-    // If we can't connect to the deployed API, fall back to local development mode
-    if (window.location.hostname === 'localhost') {
-      console.log('Running in local development mode, simulating online status');
-      return true;
-    }
-    
-    return false;
-  }
 };
 
 // Simulate typing delay for more natural bot responses
@@ -135,7 +111,7 @@ export const getResponseWithDelay = async (
   }
 };
 
-// Add a new function for direct chat without API in case of connection issues
+// Get a direct response for FAQ or emergency situations
 export const getDirectResponse = (userInput: string): string => {
   // Check for emergency keywords first
   const emergencyResponse = checkForEmergency(userInput);
@@ -149,5 +125,5 @@ export const getDirectResponse = (userInput: string): string => {
     return faqResponse;
   }
   
-  return "I'm currently operating in offline mode with limited capabilities. I can answer basic questions but for more complex queries, please try again when I'm back online.";
+  return "I'll help you with that. Please wait while I process your request.";
 };

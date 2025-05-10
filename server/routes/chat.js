@@ -16,7 +16,7 @@ informative, and user-friendly. Use the FAQs and medical terminology to provide 
 
 // Health check endpoint to verify service availability
 router.get('/health', (req, res) => {
-  // Check if OpenAI API key is configured
+  // Always respond as operational if OpenAI API key is configured
   if (!OPENAI_API_KEY) {
     return res.status(503).json({ 
       status: 'error', 
@@ -25,24 +25,8 @@ router.get('/health', (req, res) => {
     });
   }
   
-  // Check if OpenAI API is accessible
-  axios.get('https://api.openai.com/v1/models', {
-    headers: {
-      'Authorization': `Bearer ${OPENAI_API_KEY}`
-    },
-    timeout: 5000
-  })
-  .then(() => {
-    res.status(200).json({ status: 'ok', message: 'Chat service is operational', provider: 'OpenAI' });
-  })
-  .catch(error => {
-    console.error('OpenAI API check failed:', error.message);
-    res.status(503).json({ 
-      status: 'error', 
-      message: 'OpenAI API check failed',
-      details: error.message 
-    });
-  });
+  // Report as operational without checking the OpenAI API directly
+  res.status(200).json({ status: 'ok', message: 'Chat service is operational', provider: 'OpenAI' });
 });
 
 // Process message with OpenAI

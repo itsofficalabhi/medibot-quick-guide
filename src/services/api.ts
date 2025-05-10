@@ -82,13 +82,10 @@ export const prescriptionsAPI = {
     api.get(`/prescriptions/${id}`),
 };
 
-// Chat API using OpenAI
+// Chat API using OpenAI - simplified to always use OpenAI
 export const chatAPI = {
   sendMessage: (message: string) => 
     api.post('/chat/openai', { message }),
-  
-  checkHealth: () =>
-    api.get('/chat/health'),
 };
 
 export default api;

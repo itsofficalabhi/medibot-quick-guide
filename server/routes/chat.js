@@ -25,7 +25,24 @@ router.get('/health', (req, res) => {
     });
   }
   
-  res.status(200).json({ status: 'ok', message: 'Chat service is operational' });
+  // Check if OpenAI API is accessible
+  axios.get('https://api.openai.com/v1/models', {
+    headers: {
+      'Authorization': `Bearer ${OPENAI_API_KEY}`
+    },
+    timeout: 5000
+  })
+  .then(() => {
+    res.status(200).json({ status: 'ok', message: 'Chat service is operational', provider: 'OpenAI' });
+  })
+  .catch(error => {
+    console.error('OpenAI API check failed:', error.message);
+    res.status(503).json({ 
+      status: 'error', 
+      message: 'OpenAI API check failed',
+      details: error.message 
+    });
+  });
 });
 
 // Process message with OpenAI
@@ -93,6 +110,19 @@ router.post('/openai', async (req, res) => {
       response: errorMessage
     });
   }
+});
+
+// Quick test endpoint - returns a simple response without using OpenAI
+router.post('/test', (req, res) => {
+  const { message } = req.body;
+  
+  if (!message) {
+    return res.status(400).json({ error: 'Message is required' });
+  }
+  
+  const response = `This is a test response. You said: "${message}". The chat service is working properly.`;
+  
+  res.json({ response });
 });
 
 module.exports = router;

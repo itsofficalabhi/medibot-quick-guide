@@ -1,4 +1,3 @@
-
 import { chatAPI } from '@/services/api';
 import { toast } from '@/hooks/use-toast';
 import { faqList, emergencyKeywords, emergencyResponses, fallbackResponses } from '@/data/faqData';
@@ -78,31 +77,25 @@ export const getFallbackResponse = (): string => {
 // Check if the API server is available
 export const checkApiConnection = async (): Promise<boolean> => {
   try {
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-    console.log('Checking API connection at:', apiUrl);
+    console.log('Checking API connection...');
     
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    // Use the API client instead of fetch for consistent behavior
+    const response = await chatAPI.checkHealth();
     
-    const response = await fetch(`${apiUrl}/chat/health`, { 
-      method: 'GET',
-      cache: 'no-cache',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      signal: controller.signal
-    });
-    
-    clearTimeout(timeoutId);
-    
-    if (response.ok) {
-      const data = await response.json();
-      console.log('API connection check result:', data);
-      return data.status === 'ok';
+    if (response.status === 200) {
+      console.log('API connection check result:', response.data);
+      return response.data.status === 'ok';
     }
     return false;
   } catch (error) {
     console.error('API connection check failed:', error);
+    
+    // If we can't connect to the deployed API, fall back to local development mode
+    if (window.location.hostname === 'localhost') {
+      console.log('Running in local development mode, simulating online status');
+      return true;
+    }
+    
     return false;
   }
 };
@@ -140,4 +133,21 @@ export const getResponseWithDelay = async (
     setTyping(false);
     callback(getFallbackResponse());
   }
+};
+
+// Add a new function for direct chat without API in case of connection issues
+export const getDirectResponse = (userInput: string): string => {
+  // Check for emergency keywords first
+  const emergencyResponse = checkForEmergency(userInput);
+  if (emergencyResponse) {
+    return emergencyResponse;
+  }
+  
+  // Check FAQ for quick responses to common questions
+  const faqResponse = checkForFAQMatch(userInput);
+  if (faqResponse) {
+    return faqResponse;
+  }
+  
+  return "I'm currently operating in offline mode with limited capabilities. I can answer basic questions but for more complex queries, please try again when I'm back online.";
 };

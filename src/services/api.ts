@@ -1,7 +1,8 @@
 
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+// Use a deployed API URL instead of localhost
+const API_URL = import.meta.env.VITE_API_URL || 'https://mediclinic-api.onrender.com/api';
 
 const api = axios.create({
   baseURL: API_URL,
@@ -85,6 +86,9 @@ export const prescriptionsAPI = {
 export const chatAPI = {
   sendMessage: (message: string) => 
     api.post('/chat/openai', { message }),
+  
+  checkHealth: () =>
+    api.get('/chat/health'),
 };
 
 export default api;

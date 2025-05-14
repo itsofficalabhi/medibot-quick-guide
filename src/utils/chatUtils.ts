@@ -1,11 +1,10 @@
-
 import { toast } from "sonner";
 import { v4 as uuidv4 } from 'uuid';
 import { ChatMessage, ChatSession } from '@/types/chat';
 
 // Constants
 const SYSTEM_USER_ID = 'system';
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
 
 // Interfaces
 interface MockResponseConfig {

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -171,7 +170,7 @@ const PrescriptionForm: React.FC<PrescriptionFormProps> = ({
                     <SelectValue placeholder="Select appointment (optional)" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">No appointment</SelectItem>
+                    <SelectItem value="none">No appointment</SelectItem>
                     {appointments.map((apt) => (
                       <SelectItem key={apt.id} value={apt.id}>
                         {format(new Date(apt.date), 'MMM d, yyyy')} at {apt.time} - {apt.type}

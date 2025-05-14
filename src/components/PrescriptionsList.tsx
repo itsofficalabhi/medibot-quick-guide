@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -208,7 +207,7 @@ const PrescriptionsList: React.FC<PrescriptionsListProps> = ({ userId, userRole 
                   </h3>
                   <p className="text-sm text-muted-foreground">
                     {new Date(prescription.date).toLocaleDateString()}
-                    {prescription.appointmentId && (
+                    {prescription.appointmentId && prescription.appointmentId !== 'none' && (
                       <span className="ml-2 text-primary">Appointment #{prescription.appointmentId}</span>
                     )}
                   </p>

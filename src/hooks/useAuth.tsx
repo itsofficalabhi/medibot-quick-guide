@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { authAPI } from '@/services/api';
-import { toast } from 'sonner';
+import { toast } from "sonner";
 
 interface User {
   id: string;
@@ -241,8 +241,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(userInfo));
         localStorage.setItem(TOKEN_STORAGE_KEY, response.data.token);
         
-        toast({
-          title: "Login Successful",
+        toast.success("Login Successful", {
           description: `Welcome back, ${response.data.user.name}!`
         });
         return true;
@@ -279,8 +278,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(userInfo));
         localStorage.setItem(TOKEN_STORAGE_KEY, mockToken);
         
-        toast({
-          title: "Login Successful (Demo Mode)",
+        toast.success("Login Successful (Demo Mode)", {
           description: "Using mock data since API connection failed."
         });
         return true;
@@ -308,8 +306,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(userInfo));
         localStorage.setItem(TOKEN_STORAGE_KEY, response.data.token);
         
-        toast({
-          title: "Registration Successful",
+        toast.success("Registration Successful", {
           description: "Welcome to MediClinic!"
         });
         return true;
@@ -335,9 +332,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(newUser));
       localStorage.setItem(TOKEN_STORAGE_KEY, mockToken);
       
-      toast({
-        title: "Registration Successful (Demo Mode)",
-        description: "Using mock data since API connection failed."
+      toast.success("Registration Successful (Demo Mode)", {
+          description: "Using mock data since API connection failed."
       });
       return true;
     }
@@ -352,8 +348,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // Also clear chat session
     localStorage.removeItem('chat_session_id');
     
-    toast({
-      title: "Logged Out",
+    toast.success("Logged Out", {
       description: "You have been successfully logged out."
     });
   };
@@ -362,8 +357,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // Mock forgot password functionality
     console.log(`Password reset email would be sent to ${email}`);
     
-    toast({
-      title: "Password Reset Email Sent",
+    toast.success("Password Reset Email Sent", {
       description: `Instructions have been sent to ${email}`
     });
     return true;

@@ -1,5 +1,5 @@
 
-import { toast as sonnerToast, ToastT } from "sonner"
+import { toast as sonnerToast } from "sonner"
 
 type ToastProps = {
   title?: string
@@ -61,11 +61,5 @@ export function useToast() {
   }
 }
 
-// Export a properly typed toast function directly
-export const toast = (props: ToastProps) => {
-  sonnerToast(props.title || "", {
-    description: props.description,
-    action: props.action,
-    variant: props.variant,
-  });
-}
+// Export a direct toast function that matches the sonner API
+export const toast = sonnerToast;

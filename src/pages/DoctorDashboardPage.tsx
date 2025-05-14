@@ -5,7 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Separator } from '@/components/ui/separator';
 import { CalendarIcon, User, FileText, Settings, Clock, CheckCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { toast } from 'sonner';
+import { toast } from "sonner";
 import PrescriptionForm from '../components/PrescriptionForm';
 import PrescriptionsList from '../components/PrescriptionsList';
 import { format } from 'date-fns';
@@ -115,16 +115,14 @@ const DoctorDashboardPage: React.FC = () => {
 
   // Handle appointment actions
   const handleAppointmentAction = (action: string, appointmentId: string) => {
-    toast({
-      title: `Action successful`,
+    toast.success(`Action successful`, {
       description: `${action} appointment #${appointmentId}`
     });
   };
 
   // Handle add new patient
   const handleAddPatient = () => {
-    toast({
-      title: `Feature coming soon`,
+    toast.info(`Feature coming soon`, {
       description: "Add patient functionality will be available soon."
     });
   };
@@ -370,8 +368,7 @@ const DoctorDashboardPage: React.FC = () => {
                         <Button 
                           size="sm" 
                           variant="outline"
-                          onClick={() => toast({
-                            title: "Feature coming soon",
+                          onClick={() => toast.info("Feature coming soon", {
                             description: "View patient record functionality will be available soon."
                           })}
                         >
@@ -406,8 +403,7 @@ const DoctorDashboardPage: React.FC = () => {
           <PrescriptionForm 
             doctorId={user.id} 
             onComplete={() => {
-              toast({
-                title: "Prescription Created",
+              toast.success("Prescription Created", {
                 description: "The prescription has been created successfully."
               });
             }} 
@@ -520,8 +516,7 @@ const DoctorDashboardPage: React.FC = () => {
               
               <Button 
                 type="button" 
-                onClick={() => toast({
-                  title: "Profile Updated",
+                onClick={() => toast.success("Profile Updated", {
                   description: "Your doctor profile has been updated successfully."
                 })}
               >
@@ -563,8 +558,7 @@ const DoctorDashboardPage: React.FC = () => {
             
             <Button 
               variant="outline" 
-              onClick={() => toast({
-                title: "Feature coming soon",
+              onClick={() => toast.info("Feature coming soon", {
                 description: "Change password functionality will be available soon."
               })}
             >

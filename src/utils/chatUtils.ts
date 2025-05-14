@@ -3,200 +3,225 @@ import { v4 as uuidv4 } from 'uuid';
 import { ChatMessage, ChatSession } from '@/types/chat';
 
 // Constants
-const CHAT_SESSION_STORAGE_KEY = 'chat_session_id';
-const MAX_MESSAGES_PER_SESSION = 50;
+const SYSTEM_USER_ID = 'system';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000';
 
-// Initialize or retrieve chat session
-export const initChatSession = (userId: string, doctorId?: string): ChatSession => {
-  // Check if there's an existing session ID in localStorage
-  const existingSessionId = localStorage.getItem(CHAT_SESSION_STORAGE_KEY);
-  
-  if (existingSessionId) {
-    // Return existing session
-    return {
-      id: existingSessionId,
-      userId,
-      doctorId,
-      startTime: new Date().toISOString(),
-      messages: []
-    };
-  } else {
-    // Create new session
-    const newSessionId = uuidv4();
-    localStorage.setItem(CHAT_SESSION_STORAGE_KEY, newSessionId);
-    
-    return {
-      id: newSessionId,
-      userId,
-      doctorId,
-      startTime: new Date().toISOString(),
-      messages: []
-    };
+// Interfaces
+interface MockResponseConfig {
+  keywords: string[];
+  responses: string[];
+}
+
+// Mock responses configuration
+const mockResponses: MockResponseConfig[] = [
+  {
+    keywords: ['appointment', 'schedule', 'book'],
+    responses: [
+      "Okay, let's get you scheduled. What day and time works best for you?",
+      "Sure, I can help with that. Could you provide a preferred date?",
+      "I can assist with scheduling. Please let me know your availability."
+    ]
+  },
+  {
+    keywords: ['prescription', 'refill', 'medication'],
+    responses: [
+      "I can help with your prescription. Which medication are you looking to refill?",
+      "To refill your prescription, I'll need the name of the medication.",
+      "I'll process that for you. Can you spell out the medication name?"
+    ]
+  },
+  {
+    keywords: ['test results', 'lab results', 'report'],
+    responses: [
+      "Your test results are ready. Would you like to review them now?",
+      "I can provide your lab results. Do you have a specific test in mind?",
+      "Your report is available. I can summarize it or provide the full details."
+    ]
+  },
+  {
+    keywords: ['billing', 'insurance', 'payment'],
+    responses: [
+      "I can assist with billing inquiries. What questions do you have?",
+      "For insurance matters, please provide your policy number.",
+      "To discuss payment options, let me know what you're looking to do."
+    ]
+  },
+  {
+    keywords: ['referral', 'specialist', 'consultation'],
+    responses: [
+      "I can help with a referral. Which specialist are you looking to see?",
+      "To request a referral, I'll need the specialist's name and location.",
+      "I'll set up a specialist consultation. What are your preferences?"
+    ]
+  },
+  {
+    keywords: ['general', 'question', 'help'],
+    responses: [
+      "How can I assist you today?",
+      "What questions do you have for me?",
+      "I'm here to help. What's on your mind?"
+    ]
   }
-};
+];
 
-// Add message to chat session
-export const addMessageToSession = (
-  session: ChatSession,
-  content: string,
-  sender: 'user' | 'doctor' | 'system',
-  attachments?: string[]
-): ChatMessage => {
-  const newMessage: ChatMessage = {
-    id: uuidv4(),
-    sessionId: session.id,
-    content,
-    sender,
-    timestamp: new Date().toISOString(),
-    attachments: attachments || [],
-    isRead: sender !== 'user' // Messages from user are unread initially
-  };
+// Function to generate a mock response
+const generateMockResponse = (userMessage: string): string => {
+  const lowerMessage = userMessage.toLowerCase();
   
-  // Check if we've reached the message limit
-  if (session.messages.length >= MAX_MESSAGES_PER_SESSION) {
-    // Remove oldest message
-    session.messages.shift();
-    
-    toast({
-      title: "Message limit reached",
-      description: "Some older messages have been removed from this conversation."
-    });
-  }
-  
-  // Add new message
-  session.messages.push(newMessage);
-  
-  return newMessage;
-};
-
-// End current chat session
-export const endChatSession = (): void => {
-  localStorage.removeItem(CHAT_SESSION_STORAGE_KEY);
-};
-
-// Format timestamp for display
-export const formatChatTimestamp = (timestamp: string): string => {
-  const date = new Date(timestamp);
-  const now = new Date();
-  
-  // If message is from today, just show time
-  if (date.toDateString() === now.toDateString()) {
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  }
-  
-  // If message is from this year, show date without year
-  if (date.getFullYear() === now.getFullYear()) {
-    return date.toLocaleDateString([], { month: 'short', day: 'numeric' }) + 
-           ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  }
-  
-  // Otherwise show full date
-  return date.toLocaleDateString() + ' ' + 
-         date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-};
-
-// Check if user has unread messages
-export const hasUnreadMessages = (session: ChatSession, currentUserId: string): boolean => {
-  // For a user, check if there are unread messages from the doctor
-  // For a doctor, check if there are unread messages from the user
-  const userRole = session.userId === currentUserId ? 'user' : 'doctor';
-  const otherRole = userRole === 'user' ? 'doctor' : 'user';
-  
-  return session.messages.some(msg => 
-    msg.sender === otherRole && !msg.isRead
-  );
-};
-
-// Mark messages as read
-export const markMessagesAsRead = (session: ChatSession, currentUserId: string): void => {
-  const userRole = session.userId === currentUserId ? 'user' : 'doctor';
-  const otherRole = userRole === 'user' ? 'doctor' : 'user';
-  
-  let unreadCount = 0;
-  
-  session.messages.forEach(msg => {
-    if (msg.sender === otherRole && !msg.isRead) {
-      msg.isRead = true;
-      unreadCount++;
+  for (const config of mockResponses) {
+    if (config.keywords.some(keyword => lowerMessage.includes(keyword))) {
+      const randomIndex = Math.floor(Math.random() * config.responses.length);
+      return config.responses[randomIndex];
     }
-  });
-  
-  if (unreadCount > 0) {
-    toast({
-      title: "Messages marked as read",
-      description: `${unreadCount} new message${unreadCount > 1 ? 's' : ''} marked as read`
-    });
   }
+  
+  return "I'm sorry, I didn't understand your request. Please try again.";
 };
 
-// Get chat summary for preview
-export const getChatSummary = (session: ChatSession): string => {
-  if (session.messages.length === 0) {
-    return "No messages yet";
-  }
-  
-  const lastMessage = session.messages[session.messages.length - 1];
-  
-  // Truncate message if too long
-  let content = lastMessage.content;
-  if (content.length > 30) {
-    content = content.substring(0, 30) + '...';
-  }
-  
-  return content;
-};
-
-// Functions needed by ChatInterface.tsx
-export const getResponseWithDelay = (
-  message: string, 
-  setIsTyping: (isTyping: boolean) => void, 
-  callback: (response: any) => void
-) => {
-  setIsTyping(true);
-  
-  // Simulate API delay
-  setTimeout(() => {
-    const mockResponse = {
-      text: getMockResponse(message),
-      intent: "general_info",
-      entities: [],
-      confidence: 0.95
+// Function to start a chat session
+export const startChatSession = async (patientId: string, doctorId: string): Promise<ChatSession | null> => {
+  try {
+    // Simulate API call
+    const sessionId = uuidv4();
+    
+    const newSession: ChatSession = {
+      id: sessionId,
+      messages: []
     };
     
-    setIsTyping(false);
-    callback(mockResponse);
-  }, 1500);
+    localStorage.setItem('chat_session_id', sessionId);
+    localStorage.setItem(`chat_${sessionId}`, JSON.stringify(newSession));
+    
+    return newSession;
+  } catch (error) {
+    console.error('Error starting chat session:', error);
+    toast.error("Session Start Failed", {
+      description: "Could not start a new session. Please try again."
+    });
+    return null;
+  }
 };
 
-export const getDirectResponse = (message: string) => {
-  return getMockResponse(message);
+// Function to end a chat session
+export const endChatSession = async (sessionId: string): Promise<boolean> => {
+  try {
+    // Simulate API call
+    localStorage.removeItem('chat_session_id');
+    localStorage.removeItem(`chat_${sessionId}`);
+    return true;
+  } catch (error) {
+    console.error('Error ending chat session:', error);
+    toast.error("Session End Failed", {
+      description: "Could not end the session. Please try again."
+    });
+    return false;
+  }
 };
 
-export const resetChatSession = () => {
-  // This function is similar to endChatSession but may reset other states
-  endChatSession();
-  // Any additional reset logic would go here
+export const sendMessage = async (
+  message: string,
+  sessionId: string,
+  patientId?: string,
+  doctorId?: string
+): Promise<ChatMessage | null> => {
+  try {
+    // Simulate API call
+    
+    // Update mock logic
+    const mockMessage: ChatMessage = {
+      id: uuidv4(),
+      sessionId,
+      senderId: patientId || 'user',
+      message,
+      timestamp: new Date().toISOString(),
+      isRead: false
+    };
+    
+    const sessionKey = `chat_${sessionId}`;
+    const existingSession = localStorage.getItem(sessionKey);
+    const session: ChatSession = existingSession ? JSON.parse(existingSession) : {
+      id: sessionId,
+      messages: []
+    };
+    
+    session.messages.push(mockMessage);
+    localStorage.setItem(sessionKey, JSON.stringify(session));
+    
+    return mockMessage;
+  } catch (error) {
+    console.error('Error sending message:', error);
+    toast.error("Message Failed", {
+      description: "Could not send message. Please try again."
+    });
+    return null;
+  }
 };
 
-export const parseEntities = (entities: any[] = []) => {
-  if (!entities || entities.length === 0) return "None";
+// Function to fetch chat history
+export const getChatHistory = async (sessionId: string): Promise<ChatMessage[]> => {
+  try {
+    // Simulate API call
+    const sessionKey = `chat_${sessionId}`;
+    const existingSession = localStorage.getItem(sessionKey);
+    
+    if (existingSession) {
+      const session: ChatSession = JSON.parse(existingSession);
+      return session.messages;
+    }
+    
+    return [];
+  } catch (error) {
+    console.error('Error fetching chat history:', error);
+    toast.error("History Fetch Failed", {
+      description: "Could not retrieve chat history. Please try again."
+    });
+    return [];
+  }
+};
+
+// Handle system response
+export const getSystemResponse = async (
+  userMessage: string,
+  sessionId: string,
+  patientId?: string,
+  doctorId?: string
+): Promise<ChatMessage | null> => {
+  try {
+    // Simulate API call
   
-  return entities.map(entity => entity.value || entity.text).join(", ");
-};
-
-// Helper function to generate mock responses
-const getMockResponse = (message: string) => {
-  const lowerMessage = message.toLowerCase();
-  
-  if (lowerMessage.includes("hello") || lowerMessage.includes("hi")) {
-    return "Hello! How can I help you with your health questions today?";
-  } else if (lowerMessage.includes("headache")) {
-    return "Headaches can have many causes including stress, dehydration, or lack of sleep. If you're experiencing severe or persistent headaches, please consult with a healthcare professional.";
-  } else if (lowerMessage.includes("cold") || lowerMessage.includes("flu")) {
-    return "Cold and flu symptoms can be managed with rest, fluids, and over-the-counter medications. If symptoms persist or worsen, please consult with a healthcare professional.";
-  } else if (lowerMessage.includes("appointment")) {
-    return "To schedule an appointment, you can use our booking system or chat directly with one of our available doctors.";
-  } else {
-    return "I understand you have a health question. While I can provide general information, for specific medical advice, please consult with one of our healthcare professionals.";
+    // If we can't connect to API, generate a mock response
+    console.log('Using mock response data');
+    
+    // Create a slight delay for realism
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    const mockResponse = generateMockResponse(userMessage);
+    
+    const systemMessage: ChatMessage = {
+      id: uuidv4(),
+      sessionId,
+      senderId: doctorId || 'system',
+      message: mockResponse,
+      timestamp: new Date().toISOString(),
+      isRead: false
+    };
+    
+    const sessionKey = `chat_${sessionId}`;
+    const existingSession = localStorage.getItem(sessionKey);
+    const session: ChatSession = existingSession ? JSON.parse(existingSession) : {
+      id: sessionId,
+      messages: []
+    };
+    
+    session.messages.push(systemMessage);
+    localStorage.setItem(sessionKey, JSON.stringify(session));
+    
+    return systemMessage;
+  } catch (error) {
+    console.error('Error getting system response:', error);
+    toast.error("Response Failed", {
+      description: "Could not get a response. Please try again later."
+    });
+    return null;
   }
 };

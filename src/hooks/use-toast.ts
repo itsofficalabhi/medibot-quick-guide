@@ -2,7 +2,7 @@
 import { toast as sonnerToast } from "sonner"
 
 type ToastProps = {
-  title?: React.ReactNode
+  title?: string
   description?: React.ReactNode
   action?: React.ReactNode
   variant?: "default" | "destructive"
@@ -23,7 +23,7 @@ export function useToast() {
     toasts.push(toastData)
     
     // Use Sonner toast for actual display
-    sonnerToast(props.title as string, {
+    sonnerToast(props.title || "", {
       description: props.description,
       action: props.action,
       ...props,

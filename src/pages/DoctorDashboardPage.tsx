@@ -116,16 +116,16 @@ const DoctorDashboardPage: React.FC = () => {
   // Handle appointment actions
   const handleAppointmentAction = (action: string, appointmentId: string) => {
     toast({
-      title: "Action successful",
-      description: `${action} appointment #${appointmentId}`,
+      title: `Action successful`,
+      description: `${action} appointment #${appointmentId}`
     });
   };
 
   // Handle add new patient
   const handleAddPatient = () => {
     toast({
-      title: "Feature coming soon",
-      description: "Add patient functionality will be available soon.",
+      title: `Feature coming soon`,
+      description: "Add patient functionality will be available soon."
     });
   };
 

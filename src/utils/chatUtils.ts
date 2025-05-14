@@ -1,3 +1,4 @@
+
 import { toast } from "sonner";
 import { v4 as uuidv4 } from 'uuid';
 import { ChatMessage, ChatSession } from '@/types/chat';
@@ -11,6 +12,12 @@ interface MockResponseConfig {
   keywords: string[];
   responses: string[];
 }
+
+// Parse entities from NLP processing
+export const parseEntities = (entities: any[]): string => {
+  if (!entities || entities.length === 0) return "None";
+  return entities.map(e => `${e.entity}:${e.value}`).join(', ');
+};
 
 // Mock responses configuration
 const mockResponses: MockResponseConfig[] = [
@@ -78,14 +85,71 @@ const generateMockResponse = (userMessage: string): string => {
   return "I'm sorry, I didn't understand your request. Please try again.";
 };
 
+// Function to reset chat session
+export const resetChatSession = async (): Promise<boolean> => {
+  try {
+    const currentSessionId = localStorage.getItem('chat_session_id');
+    if (currentSessionId) {
+      localStorage.removeItem(`chat_${currentSessionId}`);
+      localStorage.removeItem('chat_session_id');
+    }
+    return true;
+  } catch (error) {
+    console.error('Error resetting chat session:', error);
+    toast.error("Couldn't reset chat session");
+    return false;
+  }
+};
+
+// Function to get direct response without delay
+export const getDirectResponse = (
+  message: string
+): { text: string; intent?: string; entities?: any[]; confidence?: number } => {
+  const mockIntent = message.toLowerCase().includes('appointment') ? 'book_appointment' :
+                   message.toLowerCase().includes('prescription') ? 'prescription_refill' :
+                   'general_inquiry';
+  
+  const mockEntities = message.toLowerCase().includes('tomorrow') ? 
+                     [{ entity: 'date', value: 'tomorrow' }] : [];
+                     
+  const mockConfidence = Math.random() * 0.3 + 0.7; // Random between 0.7 and 1.0
+  
+  return { 
+    text: generateMockResponse(message),
+    intent: mockIntent,
+    entities: mockEntities,
+    confidence: mockConfidence
+  };
+};
+
+// Function to get response with delay
+export const getResponseWithDelay = (
+  message: string,
+  setTypingState: (state: boolean) => void,
+  callback: (response: { text: string; intent?: string; entities?: any[]; confidence?: number }) => void
+): void => {
+  setTypingState(true);
+  
+  // Simulate thinking time
+  setTimeout(() => {
+    const response = getDirectResponse(message);
+    setTypingState(false);
+    callback(response);
+  }, 1500);
+};
+
 // Function to start a chat session
 export const startChatSession = async (patientId: string, doctorId: string): Promise<ChatSession | null> => {
   try {
     // Simulate API call
     const sessionId = uuidv4();
+    const currentTime = new Date().toISOString();
     
     const newSession: ChatSession = {
       id: sessionId,
+      userId: patientId,
+      doctorId: doctorId,
+      startTime: currentTime,
       messages: []
     };
     
@@ -131,18 +195,28 @@ export const sendMessage = async (
     const mockMessage: ChatMessage = {
       id: uuidv4(),
       sessionId,
-      senderId: patientId || 'user',
-      message,
+      content: message,
+      sender: patientId ? 'user' : (doctorId ? 'doctor' : 'system'),
       timestamp: new Date().toISOString(),
+      attachments: [],
       isRead: false
     };
     
     const sessionKey = `chat_${sessionId}`;
     const existingSession = localStorage.getItem(sessionKey);
-    const session: ChatSession = existingSession ? JSON.parse(existingSession) : {
-      id: sessionId,
-      messages: []
-    };
+    let session: ChatSession;
+    
+    if (existingSession) {
+      session = JSON.parse(existingSession);
+    } else {
+      session = {
+        id: sessionId,
+        userId: patientId || 'anonymous',
+        doctorId,
+        startTime: new Date().toISOString(),
+        messages: []
+      };
+    }
     
     session.messages.push(mockMessage);
     localStorage.setItem(sessionKey, JSON.stringify(session));
@@ -200,18 +274,28 @@ export const getSystemResponse = async (
     const systemMessage: ChatMessage = {
       id: uuidv4(),
       sessionId,
-      senderId: doctorId || 'system',
-      message: mockResponse,
+      content: mockResponse,
+      sender: doctorId ? 'doctor' : 'system',
       timestamp: new Date().toISOString(),
+      attachments: [],
       isRead: false
     };
     
     const sessionKey = `chat_${sessionId}`;
     const existingSession = localStorage.getItem(sessionKey);
-    const session: ChatSession = existingSession ? JSON.parse(existingSession) : {
-      id: sessionId,
-      messages: []
-    };
+    let session: ChatSession;
+    
+    if (existingSession) {
+      session = JSON.parse(existingSession);
+    } else {
+      session = {
+        id: sessionId,
+        userId: patientId || 'anonymous',
+        doctorId,
+        startTime: new Date().toISOString(),
+        messages: []
+      };
+    }
     
     session.messages.push(systemMessage);
     localStorage.setItem(sessionKey, JSON.stringify(session));

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -404,7 +403,15 @@ const DoctorDashboardPage: React.FC = () => {
       <div className="space-y-8">
         <div>
           <h3 className="text-lg font-semibold mb-4">Create New Prescription</h3>
-          <PrescriptionForm doctorId={user.id} />
+          <PrescriptionForm 
+            doctorId={user.id} 
+            onComplete={() => {
+              toast({
+                title: "Prescription Created",
+                description: "The prescription has been created successfully."
+              });
+            }} 
+          />
         </div>
         
         <Separator />
@@ -676,4 +683,3 @@ const DoctorDashboardPage: React.FC = () => {
 };
 
 export default DoctorDashboardPage;
-

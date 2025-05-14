@@ -1,327 +1,241 @@
-import React, { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Textarea } from '@/components/ui/textarea';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useToast } from '@/components/ui/use-toast';
+import React, { useState } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { Form, FormField, FormItem, FormLabel, FormControl } from '@/components/ui/form';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { format } from 'date-fns';
-import { CalendarIcon } from 'lucide-react';
-import { useForm } from 'react-hook-form';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
+import { Plus, Trash } from 'lucide-react';
+import { v4 as uuidv4 } from 'uuid';
+import { useToast } from '@/components/ui/use-toast';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select';
 
-interface PrescriptionFormProps {
-  onComplete: () => void;
-  patientName?: string;
-  patientId?: string;
-  appointmentId?: number;
-  doctorId?: string;
+interface Medicine {
+  name: string;
+  dosage: string;
+  frequency: string;
+  duration: string;
 }
 
-interface FormValues {
-  patientName: string;
-  patientId: string;
-  diagnosis: string;
-  instructions: string;
-  followupDate?: Date;
-  appointmentId?: string;
+export interface PrescriptionFormProps {
+  doctorId: string;
+  onComplete?: () => void;
 }
 
-interface Appointment {
-  id: string;
-  date: string;
-  time: string;
-  type: string;
-}
-
-const PrescriptionForm: React.FC<PrescriptionFormProps> = ({ 
-  patientName = '', 
-  patientId = '', 
-  appointmentId,
-  doctorId = '',
-  onComplete 
-}) => {
-  const [medicines, setMedicines] = useState([
-    { name: '', dosage: '', frequency: '', duration: '' }
-  ]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [selectedAppointmentId, setSelectedAppointmentId] = useState<string | undefined>(
-    appointmentId ? String(appointmentId) : undefined
-  );
+const PrescriptionForm: React.FC<PrescriptionFormProps> = ({ doctorId, onComplete }) => {
+  const [patientName, setPatientName] = useState('');
+  const [patientId, setPatientId] = useState('');
+  const [appointmentId, setAppointmentId] = useState('');
+  const [diagnosis, setDiagnosis] = useState('');
+  const [medicines, setMedicines] = useState<Medicine[]>([{ name: '', dosage: '', frequency: '', duration: '' }]);
+  const [instructions, setInstructions] = useState('');
+  const [followupDate, setFollowupDate] = useState('');
   const { toast } = useToast();
-  
-  const form = useForm<FormValues>({
-    defaultValues: {
-      patientName,
-      patientId,
-      diagnosis: '',
-      instructions: '',
-      appointmentId: appointmentId ? String(appointmentId) : undefined
-    }
-  });
-
-  // Fetch patient's appointments with this doctor
-  useEffect(() => {
-    if (patientId && doctorId) {
-      // In a real app, this would be an API call
-      // For now we'll use mock data from localStorage
-      const allAppointments = JSON.parse(localStorage.getItem('appointments') || '[]');
-      const patientAppointments = allAppointments.filter(
-        (apt: any) => apt.patientId === patientId && apt.doctorId === doctorId
-      );
-      setAppointments(patientAppointments);
-    }
-  }, [patientId, doctorId]);
 
   const addMedicine = () => {
     setMedicines([...medicines, { name: '', dosage: '', frequency: '', duration: '' }]);
   };
 
   const removeMedicine = (index: number) => {
-    setMedicines(medicines.filter((_, i) => i !== index));
+    const newMedicines = [...medicines];
+    newMedicines.splice(index, 1);
+    setMedicines(newMedicines);
   };
 
   const updateMedicine = (index: number, field: string, value: string) => {
-    const updatedMedicines = [...medicines];
-    updatedMedicines[index] = { ...updatedMedicines[index], [field]: value };
-    setMedicines(updatedMedicines);
+    const newMedicines = [...medicines];
+    newMedicines[index] = { ...newMedicines[index], [field]: value };
+    setMedicines(newMedicines);
   };
 
-  const handleSubmit = (values: FormValues) => {
-    setIsSubmitting(true);
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
 
-    // Create prescription object
+    if (!patientName || !patientId || !diagnosis || medicines.some(med => !med.name || !med.dosage || !med.frequency || !med.duration)) {
+      toast({
+        title: "Error",
+        description: "Please fill in all required fields for patient info, diagnosis, and all medicines.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     const prescription = {
-      patientName: values.patientName,
-      patientId: values.patientId,
-      appointmentId: selectedAppointmentId,
-      diagnosis: values.diagnosis,
+      id: uuidv4(),
+      patientName,
+      patientId,
+      appointmentId,
+      diagnosis,
       medicines,
-      instructions: values.instructions,
-      followupDate: values.followupDate ? values.followupDate.toISOString() : undefined,
+      instructions,
       date: new Date().toISOString(),
-      id: `prescription-${Date.now()}`,
-      doctorId
+      doctorId: doctorId,
+      followupDate: followupDate,
+      status: 'active'
     };
 
-    // Save to localStorage (in a real app, this would go to a database)
-    const existingPrescriptions = JSON.parse(localStorage.getItem('prescriptions') || '[]');
-    localStorage.setItem('prescriptions', JSON.stringify([...existingPrescriptions, prescription]));
+    // Save prescription to local storage
+    let prescriptions = JSON.parse(localStorage.getItem('prescriptions') || '[]');
+    prescriptions.push(prescription);
+    localStorage.setItem('prescriptions', JSON.stringify(prescriptions));
 
-    // Also save to patient-specific prescriptions
-    const patientPrescriptions = JSON.parse(localStorage.getItem(`prescriptions_${values.patientId}`) || '[]');
-    localStorage.setItem(`prescriptions_${values.patientId}`, JSON.stringify([...patientPrescriptions, prescription]));
+    // Also save under patient ID
+    let patientPrescriptions = JSON.parse(localStorage.getItem(`prescriptions_${patientId}`) || '[]');
+    patientPrescriptions.push(prescription);
+    localStorage.setItem(`prescriptions_${patientId}`, JSON.stringify(patientPrescriptions));
 
-    // Show success message
-    toast({
-      title: "Prescription Created",
-      description: "The prescription has been successfully created and shared with the patient.",
-    });
+    setPatientName('');
+    setPatientId('');
+    setAppointmentId('');
+    setDiagnosis('');
+    setMedicines([{ name: '', dosage: '', frequency: '', duration: '' }]);
+    setInstructions('');
+    setFollowupDate('');
 
-    setIsSubmitting(false);
-    onComplete();
+    if (onComplete) {
+      onComplete();
+    }
   };
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Create Prescription</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-              <div>
-                <Label className="text-sm font-medium block mb-1" htmlFor="patientName">Patient Name</Label>
-                <Input
-                  id="patientName"
-                  {...form.register('patientName')}
-                  placeholder="Enter patient name" 
-                  required
-                />
-              </div>
-              <div>
-                <Label className="text-sm font-medium block mb-1" htmlFor="patientId">Patient ID</Label>
-                <Input
-                  id="patientId"
-                  {...form.register('patientId')}
-                  placeholder="Enter patient ID" 
-                  required
-                />
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-              <div>
-                <Label className="text-sm font-medium block mb-1">Date</Label>
-                <Input value={new Date().toLocaleDateString()} disabled />
-              </div>
-              <div>
-                <Label className="text-sm font-medium block mb-1">Appointment</Label>
-                <Select 
-                  value={selectedAppointmentId} 
-                  onValueChange={(value) => setSelectedAppointmentId(value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select appointment (optional)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">No appointment</SelectItem>
-                    {appointments.map((apt) => (
-                      <SelectItem key={apt.id} value={apt.id}>
-                        {format(new Date(apt.date), 'MMM d, yyyy')} at {apt.time} - {apt.type}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="mb-4">
-              <Label className="text-sm font-medium block mb-1" htmlFor="diagnosis">Diagnosis</Label>
-              <Textarea 
-                id="diagnosis"
-                {...form.register('diagnosis')}
-                placeholder="Enter diagnosis details" 
+      <CardContent className="p-6">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="patientName">Patient Name</Label>
+              <Input
+                type="text"
+                id="patientName"
+                value={patientName}
+                onChange={(e) => setPatientName(e.target.value)}
                 required
               />
             </div>
+            <div>
+              <Label htmlFor="patientId">Patient ID</Label>
+              <Input
+                type="text"
+                id="patientId"
+                value={patientId}
+                onChange={(e) => setPatientId(e.target.value)}
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="appointmentId">Appointment ID (Optional)</Label>
+              <Select onValueChange={(value) => setAppointmentId(value)}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select Appointment ID" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None</SelectItem>
+                  <SelectItem value="123">123</SelectItem>
+                  <SelectItem value="456">456</SelectItem>
+                  <SelectItem value="789">789</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="followupDate">Follow-up Date (Optional)</Label>
+              <Input
+                type="date"
+                id="followupDate"
+                value={followupDate}
+                onChange={(e) => setFollowupDate(e.target.value)}
+              />
+            </div>
+          </div>
 
-            <div className="mb-4">
-              <div className="flex justify-between items-center mb-2">
-                <Label className="text-sm font-medium">Medications</Label>
-                <Button type="button" size="sm" variant="outline" onClick={addMedicine}>
-                  Add Medicine
-                </Button>
-              </div>
+          <div>
+            <Label htmlFor="diagnosis">Diagnosis</Label>
+            <Textarea
+              id="diagnosis"
+              value={diagnosis}
+              onChange={(e) => setDiagnosis(e.target.value)}
+              required
+            />
+          </div>
 
-              {medicines.map((medicine, index) => (
-                <div key={index} className="p-3 border rounded-md mb-3">
-                  <div className="flex justify-between items-center mb-2">
-                    <h4 className="text-sm font-medium">Medicine {index + 1}</h4>
-                    {medicines.length > 1 && (
-                      <Button 
-                        type="button" 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => removeMedicine(index)}
-                        className="h-8 w-8 p-0 text-destructive"
-                      >
-                        ×
-                      </Button>
-                    )}
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2">
-                    <div>
-                      <label className="text-xs block mb-1">Medicine Name</label>
-                      <Input 
-                        value={medicine.name} 
-                        onChange={(e) => updateMedicine(index, 'name', e.target.value)}
-                        placeholder="Medicine name" 
-                        required 
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs block mb-1">Dosage</label>
-                      <Input 
-                        value={medicine.dosage} 
-                        onChange={(e) => updateMedicine(index, 'dosage', e.target.value)}
-                        placeholder="e.g., 10mg" 
-                        required 
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <div>
-                      <label className="text-xs block mb-1">Frequency</label>
-                      <Select 
-                        value={medicine.frequency} 
-                        onValueChange={(value) => updateMedicine(index, 'frequency', value)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select frequency" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Once daily">Once daily</SelectItem>
-                          <SelectItem value="Twice daily">Twice daily</SelectItem>
-                          <SelectItem value="Three times a day">Three times a day</SelectItem>
-                          <SelectItem value="Four times a day">Four times a day</SelectItem>
-                          <SelectItem value="Every other day">Every other day</SelectItem>
-                          <SelectItem value="As needed">As needed</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <label className="text-xs block mb-1">Duration</label>
-                      <Input 
-                        value={medicine.duration} 
-                        onChange={(e) => updateMedicine(index, 'duration', e.target.value)}
-                        placeholder="e.g., 7 days" 
-                        required 
-                      />
-                    </div>
-                  </div>
+          <div>
+            <Label>Medicines</Label>
+            {medicines.map((medicine, index) => (
+              <div key={index} className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                <div>
+                  <Label htmlFor={`medicineName-${index}`}>Name</Label>
+                  <Input
+                    type="text"
+                    id={`medicineName-${index}`}
+                    value={medicine.name}
+                    onChange={(e) => updateMedicine(index, 'name', e.target.value)}
+                    required
+                  />
                 </div>
-              ))}
-            </div>
-
-            <div className="mb-4">
-              <Label className="text-sm font-medium block mb-1" htmlFor="instructions">Additional Instructions</Label>
-              <Textarea 
-                id="instructions"
-                {...form.register('instructions')}
-                placeholder="Enter any additional instructions for the patient" 
-              />
-            </div>
-
-            <div className="mb-4">
-              <Label className="text-sm font-medium block mb-1">Follow-up Date (Optional)</Label>
-              <FormField
-                control={form.control}
-                name="followupDate"
-                render={({ field }) => (
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="w-full justify-start text-left font-normal"
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {field.value ? format(field.value, 'PPP') : <span>Select date</span>}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                      <Calendar
-                        mode="single"
-                        selected={field.value}
-                        onSelect={field.onChange}
-                        initialFocus
-                        disabled={(date) => date < new Date()}
-                      />
-                    </PopoverContent>
-                  </Popover>
+                <div>
+                  <Label htmlFor={`medicineDosage-${index}`}>Dosage</Label>
+                  <Input
+                    type="text"
+                    id={`medicineDosage-${index}`}
+                    value={medicine.dosage}
+                    onChange={(e) => updateMedicine(index, 'dosage', e.target.value)}
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor={`medicineFrequency-${index}`}>Frequency</Label>
+                  <Input
+                    type="text"
+                    id={`medicineFrequency-${index}`}
+                    value={medicine.frequency}
+                    onChange={(e) => updateMedicine(index, 'frequency', e.target.value)}
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor={`medicineDuration-${index}`}>Duration</Label>
+                  <Input
+                    type="text"
+                    id={`medicineDuration-${index}`}
+                    value={medicine.duration}
+                    onChange={(e) => updateMedicine(index, 'duration', e.target.value)}
+                    required
+                  />
+                </div>
+                {medicines.length > 1 && (
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => removeMedicine(index)}
+                  >
+                    <Trash className="h-4 w-4 mr-2" />
+                    Remove
+                  </Button>
                 )}
-              />
-            </div>
+              </div>
+            ))}
+            <Button type="button" size="sm" onClick={addMedicine}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Medicine
+            </Button>
+          </div>
 
-            <div className="flex justify-end gap-2">
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={onComplete}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? 'Creating...' : 'Create Prescription'}
-              </Button>
-            </div>
-          </form>
-        </Form>
+          <div>
+            <Label htmlFor="instructions">Additional Instructions</Label>
+            <Textarea
+              id="instructions"
+              value={instructions}
+              onChange={(e) => setInstructions(e.target.value)}
+            />
+          </div>
+
+          <Button type="submit">Create Prescription</Button>
+        </form>
       </CardContent>
     </Card>
   );

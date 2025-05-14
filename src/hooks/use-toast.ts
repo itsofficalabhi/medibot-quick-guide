@@ -15,17 +15,17 @@ export type ToasterToast = ToastProps & {
 export const toasts: ToasterToast[] = []
 
 export function useToast() {
-  function toast({ ...props }: ToastProps) {
+  function toast({ title, description, action, variant, ...props }: ToastProps) {
     const id = Math.random().toString(36).substring(2, 9)
-    const toastData = { id, ...props }
+    const toastData = { id, title, description, action, variant, ...props }
     
     // Add toast to our local array
     toasts.push(toastData)
     
     // Use Sonner toast for actual display
-    sonnerToast(props.title || "", {
-      description: props.description,
-      action: props.action,
+    sonnerToast(title || "", {
+      description,
+      action,
       ...props,
     })
 

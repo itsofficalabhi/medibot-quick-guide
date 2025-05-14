@@ -1,3 +1,4 @@
+
 import { toast } from "@/components/ui/use-toast";
 import { v4 as uuidv4 } from 'uuid';
 import { ChatMessage, ChatSession } from '@/types/chat';
@@ -144,4 +145,59 @@ export const getChatSummary = (session: ChatSession): string => {
   }
   
   return content;
+};
+
+// New missing functions needed by ChatInterface.tsx
+export const getResponseWithDelay = (
+  message: string, 
+  setIsTyping: (isTyping: boolean) => void, 
+  callback: (response: any) => void
+) => {
+  setIsTyping(true);
+  
+  // Simulate API delay
+  setTimeout(() => {
+    const mockResponse = {
+      text: getMockResponse(message),
+      intent: "general_info",
+      entities: [],
+      confidence: 0.95
+    };
+    
+    setIsTyping(false);
+    callback(mockResponse);
+  }, 1500);
+};
+
+export const getDirectResponse = (message: string) => {
+  return getMockResponse(message);
+};
+
+export const resetChatSession = () => {
+  // This function is similar to endChatSession but may reset other states
+  endChatSession();
+  // Any additional reset logic would go here
+};
+
+export const parseEntities = (entities: any[] = []) => {
+  if (!entities || entities.length === 0) return "None";
+  
+  return entities.map(entity => entity.value || entity.text).join(", ");
+};
+
+// Helper function to generate mock responses
+const getMockResponse = (message: string) => {
+  const lowerMessage = message.toLowerCase();
+  
+  if (lowerMessage.includes("hello") || lowerMessage.includes("hi")) {
+    return "Hello! How can I help you with your health questions today?";
+  } else if (lowerMessage.includes("headache")) {
+    return "Headaches can have many causes including stress, dehydration, or lack of sleep. If you're experiencing severe or persistent headaches, please consult with a healthcare professional.";
+  } else if (lowerMessage.includes("cold") || lowerMessage.includes("flu")) {
+    return "Cold and flu symptoms can be managed with rest, fluids, and over-the-counter medications. If symptoms persist or worsen, please consult with a healthcare professional.";
+  } else if (lowerMessage.includes("appointment")) {
+    return "To schedule an appointment, you can use our booking system or chat directly with one of our available doctors.";
+  } else {
+    return "I understand you have a health question. While I can provide general information, for specific medical advice, please consult with one of our healthcare professionals.";
+  }
 };

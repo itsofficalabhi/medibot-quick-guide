@@ -14,6 +14,7 @@ import RegisterPage from "./pages/RegisterPage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import UserDashboardPage from "./pages/UserDashboardPage";
 import DoctorDashboardPage from "./pages/DoctorDashboardPage";
+import AdminDashboardPage from "./pages/AdminDashboardPage";
 import ChatPage from "./pages/ChatPage";
 import NotFound from "./pages/NotFound";
 import VideoCallPage from "./pages/VideoCallPage";
@@ -60,6 +61,12 @@ const App = () => {
                 <Route path="doctor-dashboard" element={
                   <ProtectedRoute requiredRole="doctor">
                     <DoctorDashboardPage />
+                  </ProtectedRoute>
+                } />
+                
+                <Route path="admin-dashboard" element={
+                  <ProtectedRoute requiredRole="admin">
+                    <AdminDashboardPage />
                   </ProtectedRoute>
                 } />
                 

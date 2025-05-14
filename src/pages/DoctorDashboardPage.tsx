@@ -5,7 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Separator } from '@/components/ui/separator';
 import { CalendarIcon, User, FileText, Settings, Clock, CheckCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from 'sonner';
 import PrescriptionForm from '../components/PrescriptionForm';
 import PrescriptionsList from '../components/PrescriptionsList';
 import { format } from 'date-fns';

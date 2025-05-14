@@ -1,5 +1,4 @@
-
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import { v4 as uuidv4 } from 'uuid';
 import { ChatMessage, ChatSession } from '@/types/chat';
 
@@ -147,7 +146,7 @@ export const getChatSummary = (session: ChatSession): string => {
   return content;
 };
 
-// New missing functions needed by ChatInterface.tsx
+// Functions needed by ChatInterface.tsx
 export const getResponseWithDelay = (
   message: string, 
   setIsTyping: (isTyping: boolean) => void, 

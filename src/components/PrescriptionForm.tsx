@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
@@ -8,6 +8,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/components/ui/use-toast';
 import { Label } from '@/components/ui/label';
 import { Form, FormField, FormItem, FormLabel, FormControl } from '@/components/ui/form';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { format } from 'date-fns';
+import { CalendarIcon } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 
 interface PrescriptionFormProps {
@@ -15,6 +19,7 @@ interface PrescriptionFormProps {
   patientName?: string;
   patientId?: string;
   appointmentId?: number;
+  doctorId?: string;
 }
 
 interface FormValues {
@@ -22,18 +27,32 @@ interface FormValues {
   patientId: string;
   diagnosis: string;
   instructions: string;
+  followupDate?: Date;
+  appointmentId?: string;
+}
+
+interface Appointment {
+  id: string;
+  date: string;
+  time: string;
+  type: string;
 }
 
 const PrescriptionForm: React.FC<PrescriptionFormProps> = ({ 
   patientName = '', 
   patientId = '', 
   appointmentId,
+  doctorId = '',
   onComplete 
 }) => {
   const [medicines, setMedicines] = useState([
     { name: '', dosage: '', frequency: '', duration: '' }
   ]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [selectedAppointmentId, setSelectedAppointmentId] = useState<string | undefined>(
+    appointmentId ? String(appointmentId) : undefined
+  );
   const { toast } = useToast();
   
   const form = useForm<FormValues>({
@@ -41,9 +60,23 @@ const PrescriptionForm: React.FC<PrescriptionFormProps> = ({
       patientName,
       patientId,
       diagnosis: '',
-      instructions: ''
+      instructions: '',
+      appointmentId: appointmentId ? String(appointmentId) : undefined
     }
   });
+
+  // Fetch patient's appointments with this doctor
+  useEffect(() => {
+    if (patientId && doctorId) {
+      // In a real app, this would be an API call
+      // For now we'll use mock data from localStorage
+      const allAppointments = JSON.parse(localStorage.getItem('appointments') || '[]');
+      const patientAppointments = allAppointments.filter(
+        (apt: any) => apt.patientId === patientId && apt.doctorId === doctorId
+      );
+      setAppointments(patientAppointments);
+    }
+  }, [patientId, doctorId]);
 
   const addMedicine = () => {
     setMedicines([...medicines, { name: '', dosage: '', frequency: '', duration: '' }]);
@@ -66,12 +99,14 @@ const PrescriptionForm: React.FC<PrescriptionFormProps> = ({
     const prescription = {
       patientName: values.patientName,
       patientId: values.patientId,
-      appointmentId,
+      appointmentId: selectedAppointmentId,
       diagnosis: values.diagnosis,
       medicines,
       instructions: values.instructions,
+      followupDate: values.followupDate ? values.followupDate.toISOString() : undefined,
       date: new Date().toISOString(),
-      id: `prescription-${Date.now()}`
+      id: `prescription-${Date.now()}`,
+      doctorId
     };
 
     // Save to localStorage (in a real app, this would go to a database)
@@ -127,8 +162,23 @@ const PrescriptionForm: React.FC<PrescriptionFormProps> = ({
                 <Input value={new Date().toLocaleDateString()} disabled />
               </div>
               <div>
-                <Label className="text-sm font-medium block mb-1">Appointment ID</Label>
-                <Input value={appointmentId || 'Not specified'} disabled />
+                <Label className="text-sm font-medium block mb-1">Appointment</Label>
+                <Select 
+                  value={selectedAppointmentId} 
+                  onValueChange={(value) => setSelectedAppointmentId(value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select appointment (optional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">No appointment</SelectItem>
+                    {appointments.map((apt) => (
+                      <SelectItem key={apt.id} value={apt.id}>
+                        {format(new Date(apt.date), 'MMM d, yyyy')} at {apt.time} - {apt.type}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
@@ -226,6 +276,36 @@ const PrescriptionForm: React.FC<PrescriptionFormProps> = ({
                 id="instructions"
                 {...form.register('instructions')}
                 placeholder="Enter any additional instructions for the patient" 
+              />
+            </div>
+
+            <div className="mb-4">
+              <Label className="text-sm font-medium block mb-1">Follow-up Date (Optional)</Label>
+              <FormField
+                control={form.control}
+                name="followupDate"
+                render={({ field }) => (
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="w-full justify-start text-left font-normal"
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {field.value ? format(field.value, 'PPP') : <span>Select date</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar
+                        mode="single"
+                        selected={field.value}
+                        onSelect={field.onChange}
+                        initialFocus
+                        disabled={(date) => date < new Date()}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                )}
               />
             </div>
 

@@ -32,7 +32,13 @@ const PrescriptionSchema = new mongoose.Schema({
   date: {
     type: Date,
     default: Date.now
-  }
+  },
+  status: {
+    type: String,
+    enum: ['pending', 'active', 'completed'],
+    default: 'active'
+  },
+  followupDate: Date
 });
 
 module.exports = mongoose.model('Prescription', PrescriptionSchema);

@@ -35,6 +35,19 @@ export const authAPI = {
   
   getUser: (id: string) => 
     api.get(`/auth/${id}`),
+    
+  // Admin-specific endpoints
+  getAllUsers: () => 
+    api.get('/auth/users'),
+    
+  updateUser: (id: string, userData: any) => 
+    api.put(`/auth/${id}`, userData),
+    
+  deleteUser: (id: string) => 
+    api.delete(`/auth/${id}`),
+    
+  createAdmin: (adminData: any) => 
+    api.post('/auth/admin', adminData),
 };
 
 // Doctors API
@@ -47,6 +60,9 @@ export const doctorsAPI = {
   
   createOrUpdateDoctor: (doctorData: any) => 
     api.post('/doctors', doctorData),
+    
+  deleteDoctor: (id: string) => 
+    api.delete(`/doctors/${id}`),
 };
 
 // Appointments API
@@ -65,6 +81,10 @@ export const appointmentsAPI = {
   
   deleteAppointment: (id: string) => 
     api.delete(`/appointments/${id}`),
+    
+  // Admin-specific endpoint
+  getAllAppointments: () =>
+    api.get('/appointments'),
 };
 
 // Prescriptions API
@@ -80,12 +100,40 @@ export const prescriptionsAPI = {
   
   getPrescriptionById: (id: string) => 
     api.get(`/prescriptions/${id}`),
+    
+  // Admin-specific endpoint
+  getAllPrescriptions: () =>
+    api.get('/prescriptions'),
 };
 
-// Chat API using OpenAI - simplified to always use OpenAI
+// Chat API using Custom NLP engine
 export const chatAPI = {
-  sendMessage: (message: string) => 
-    api.post('/chat/openai', { message }),
+  sendMessage: (message: string, sessionId?: string) => 
+    api.post('/chat/process', { message, sessionId }),
+    
+  logChat: (sessionId: string, message: string, response: string, userId?: string) =>
+    api.post('/chat/log', { sessionId, message, response, userId }),
+    
+  getChatAnalytics: () =>
+    api.get('/chat/analytics'),
+};
+
+// Admin API for system management
+export const adminAPI = {
+  getDashboardStats: () =>
+    api.get('/admin/stats'),
+    
+  getSystemLogs: (page = 1, limit = 50) =>
+    api.get(`/admin/logs?page=${page}&limit=${limit}`),
+    
+  getUserActivity: (userId: string) =>
+    api.get(`/admin/activity/${userId}`),
+    
+  getSystemSettings: () =>
+    api.get('/admin/settings'),
+    
+  updateSystemSettings: (settings: any) =>
+    api.put('/admin/settings', settings),
 };
 
 export default api;

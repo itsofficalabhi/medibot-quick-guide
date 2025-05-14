@@ -2,6 +2,15 @@
 import { chatAPI } from '@/services/api';
 import { toast } from '@/hooks/use-toast';
 import { faqList, emergencyKeywords, emergencyResponses, fallbackResponses } from '@/data/faqData';
+import { v4 as uuidv4 } from 'uuid';
+
+// Store session ID for context tracking
+let chatSessionId = localStorage.getItem('chat_session_id') || uuidv4();
+
+// Ensure session ID persists
+if (!localStorage.getItem('chat_session_id')) {
+  localStorage.setItem('chat_session_id', chatSessionId);
+}
 
 // Check for emergency keywords in user input
 const checkForEmergency = (userInput: string): string | null => {
@@ -31,23 +40,43 @@ const checkForFAQMatch = (userInput: string): string | null => {
   return null;
 };
 
-// Function to process user input and get AI response
-export const processUserInput = async (userInput: string): Promise<string> => {
+// Parse entities from NLP response into a readable format
+export const parseEntities = (entities: any[] = []): string => {
+  if (!entities || entities.length === 0) return '';
+  
+  return entities
+    .map(entity => `${entity.type}: ${entity.value}`)
+    .join(', ');
+};
+
+// Function to process user input and get NLP response
+export const processUserInput = async (userInput: string): Promise<{
+  text: string;
+  intent?: string;
+  entities?: any[];
+  confidence?: number;
+}> => {
   try {
     // Check for emergency keywords first
     const emergencyResponse = checkForEmergency(userInput);
     if (emergencyResponse) {
-      return emergencyResponse;
+      return {
+        text: emergencyResponse,
+        intent: 'emergency'
+      };
     }
     
     // Check FAQ for quick responses to common questions
     const faqResponse = checkForFAQMatch(userInput);
     if (faqResponse) {
-      return faqResponse;
+      return {
+        text: faqResponse,
+        intent: 'faq'
+      };
     }
     
-    // Use the OpenAI API to process the message
-    const response = await chatAPI.sendMessage(userInput);
+    // Use the NLP API to process the message
+    const response = await chatAPI.sendMessage(userInput, chatSessionId);
     
     if (response.data.error) {
       console.error('API returned an error:', response.data.error);
@@ -56,18 +85,42 @@ export const processUserInput = async (userInput: string): Promise<string> => {
         description: "The chat service responded with an error. Please try again.",
         variant: "destructive",
       });
-      return response.data.response || getFallbackResponse();
+      return {
+        text: response.data.response || getFallbackResponse(),
+        intent: 'error'
+      };
     }
     
-    return response.data.response;
+    // Log the interaction for analytics
+    try {
+      const userId = JSON.parse(localStorage.getItem('mediclinic_user') || '{}')?.id;
+      chatAPI.logChat(
+        chatSessionId, 
+        userInput, 
+        response.data.response, 
+        userId
+      );
+    } catch (logError) {
+      console.error('Error logging chat interaction:', logError);
+    }
+    
+    return {
+      text: response.data.response,
+      intent: response.data.intent,
+      entities: response.data.entities,
+      confidence: response.data.confidence
+    };
   } catch (error) {
-    console.error('Error processing message with AI:', error);
+    console.error('Error processing message with NLP:', error);
     toast({
       title: "Connection Error",
       description: "Could not connect to the chat service. Please try again later.",
       variant: "destructive",
     });
-    return getFallbackResponse();
+    return {
+      text: getFallbackResponse(),
+      intent: 'error'
+    };
   }
 };
 
@@ -80,7 +133,12 @@ export const getFallbackResponse = (): string => {
 export const getResponseWithDelay = async (
   userInput: string, 
   setTyping: (typing: boolean) => void,
-  callback: (response: string) => void
+  callback: (response: {
+    text: string;
+    intent?: string;
+    entities?: any[];
+    confidence?: number;
+  }) => void
 ): Promise<void> => {
   setTyping(true);
   
@@ -92,7 +150,7 @@ export const getResponseWithDelay = async (
     const delay = new Promise(resolve => setTimeout(resolve, 1000));
     
     // Set a timeout for the response
-    const timeoutPromise = new Promise<string>((_, reject) => 
+    const timeoutPromise = new Promise<{text: string; intent: string}>((_, reject) => 
       setTimeout(() => reject(new Error('Request timed out')), 15000)
     );
     
@@ -107,7 +165,10 @@ export const getResponseWithDelay = async (
   } catch (error) {
     console.error('Error in getResponseWithDelay:', error);
     setTyping(false);
-    callback(getFallbackResponse());
+    callback({
+      text: getFallbackResponse(),
+      intent: 'error'
+    });
   }
 };
 
@@ -127,3 +188,10 @@ export const getDirectResponse = (userInput: string): string => {
   
   return "I'll help you with that. Please wait while I process your request.";
 };
+
+// Reset the chat session for a new conversation
+export const resetChatSession = (): void => {
+  chatSessionId = uuidv4();
+  localStorage.setItem('chat_session_id', chatSessionId);
+};
+

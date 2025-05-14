@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/components/ui/use-toast';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -16,6 +17,7 @@ const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
+  const [loginTab, setLoginTab] = useState('user');
   
   // Get the intended destination from location state, or default to dashboard
   const from = (location.state as { from?: string })?.from || '/dashboard';
@@ -48,11 +50,33 @@ const LoginPage: React.FC = () => {
     }
   };
 
+  // Prefill admin credentials
+  const handleAdminLogin = () => {
+    setEmail('applied.abhishek@gmail.com');
+    setPassword('admin');
+    setLoginTab('admin');
+  };
+
   // Create account information UI for demo purposes
   const DemoAccounts = () => (
     <div className="mt-6 border-t pt-4">
       <h3 className="text-sm font-medium mb-2">Demo Accounts</h3>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+          <h4 className="text-xs font-semibold text-primary">Admin Account</h4>
+          <div className="text-xs text-muted-foreground">
+            <p>Email: applied.abhishek@gmail.com</p>
+            <p>Password: admin</p>
+            <Button 
+              variant="link" 
+              size="sm" 
+              className="p-0 h-auto text-xs" 
+              onClick={handleAdminLogin}
+            >
+              Auto-fill
+            </Button>
+          </div>
+        </div>
         <div>
           <h4 className="text-xs font-semibold text-primary">Doctor Accounts</h4>
           <div className="text-xs text-muted-foreground">
@@ -89,6 +113,15 @@ const LoginPage: React.FC = () => {
               {errorMessage}
             </div>
           )}
+          
+          <Tabs value={loginTab} onValueChange={setLoginTab}>
+            <TabsList className="grid w-full grid-cols-3 mb-6">
+              <TabsTrigger value="user">Patient</TabsTrigger>
+              <TabsTrigger value="doctor">Doctor</TabsTrigger>
+              <TabsTrigger value="admin">Admin</TabsTrigger>
+            </TabsList>
+          </Tabs>
+          
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label htmlFor="email" className="text-sm font-medium block mb-1">

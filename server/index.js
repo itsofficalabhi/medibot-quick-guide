@@ -4,8 +4,8 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const dotenv = require('dotenv');
 
-// Routes
-const authRoutes = require('./routes/auth');
+// Routes - note: auth routes are now exported differently
+const { router: authRoutes, authorize } = require('./routes/auth');
 const doctorRoutes = require('./routes/doctors');
 const appointmentRoutes = require('./routes/appointments');
 const prescriptionRoutes = require('./routes/prescriptions');
@@ -27,8 +27,8 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/mediclini
   .then(() => console.log('MongoDB connected successfully'))
   .catch(err => console.error('MongoDB connection error:', err));
 
-// Log OpenAI API key status (just if it's set or not, never log the actual key)
-console.log('OpenAI API Key is', process.env.OPENAI_API_KEY ? 'configured' : 'not configured');
+// Log NLP service status
+console.log('NLP Service URL is', process.env.NLP_SERVICE_URL ? 'configured' : 'not configured');
 
 // Routes
 app.use('/api/auth', authRoutes);

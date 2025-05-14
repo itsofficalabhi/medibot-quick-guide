@@ -7,7 +7,7 @@ interface User {
   id: string;
   name: string;
   email: string;
-  role: 'doctor' | 'user';
+  role: 'doctor' | 'user' | 'admin';
 }
 
 interface AuthContextType {
@@ -19,10 +19,20 @@ interface AuthContextType {
   register: (name: string, email: string, password: string, mobile?: string) => Promise<boolean>;
   logout: () => void;
   forgotPassword: (email: string) => Promise<boolean>;
+  isAdmin: () => boolean;
 }
 
 // Test accounts data (used as fallback when API is not available)
 const testAccounts = {
+  admins: [
+    {
+      id: 'admin1',
+      email: 'applied.abhishek@gmail.com',
+      password: 'admin',
+      name: 'System Administrator',
+      role: 'admin' as const
+    }
+  ],
   doctors: [
     {
       id: 'doc1',
@@ -210,6 +220,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     checkAuth();
   }, []);
 
+  const isAdmin = () => {
+    return user?.role === 'admin';
+  };
+
   const login = async (email: string, password: string) => {
     try {
       // Try to authenticate with the API
@@ -230,7 +244,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         
         toast({
           title: "Login Successful",
-          description: "Welcome back to MediClinic!"
+          description: `Welcome back, ${response.data.user.name}!`
         });
         return true;
       }
@@ -243,6 +257,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.log("API failed, falling back to test accounts...");
       
       // Check against test accounts
+      const adminAccount = testAccounts.admins.find(
+        admin => admin.email === email && admin.password === password
+      );
+      
       const doctorAccount = testAccounts.doctors.find(
         doc => doc.email === email && doc.password === password
       );
@@ -251,7 +269,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         usr => usr.email === email && usr.password === password
       );
 
-      const account = doctorAccount || userAccount;
+      const account = adminAccount || doctorAccount || userAccount;
 
       if (account) {
         const { password: _, ...userInfo } = account;
@@ -331,11 +349,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setToken(null);
     localStorage.removeItem(AUTH_STORAGE_KEY);
     localStorage.removeItem(TOKEN_STORAGE_KEY);
+    
+    // Also clear chat session
+    localStorage.removeItem('chat_session_id');
+    
+    toast({
+      title: "Logged Out",
+      description: "You have been successfully logged out."
+    });
   };
 
   const forgotPassword = async (email: string) => {
     // Mock forgot password functionality
     console.log(`Password reset email would be sent to ${email}`);
+    
+    toast({
+      title: "Password Reset Email Sent",
+      description: `Instructions have been sent to ${email}`
+    });
     return true;
   };
 
@@ -347,7 +378,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     login,
     register,
     logout,
-    forgotPassword
+    forgotPassword,
+    isAdmin
   };
 
   return (

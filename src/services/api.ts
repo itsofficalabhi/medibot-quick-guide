@@ -63,6 +63,16 @@ export const doctorsAPI = {
     
   deleteDoctor: (id: string) => 
     api.delete(`/doctors/${id}`),
+    
+  getDoctorPatients: (doctorId: string) =>
+    api.get(`/doctors/${doctorId}/patients`),
+    
+  addPatient: (patientData: any) =>
+    api.post('/doctors/add-patient', patientData),
+    
+  // New method to update doctor signature
+  updateDoctorSignature: (doctorId: string, signatureUrl: string) =>
+    api.patch(`/doctors/${doctorId}/signature`, { signature: signatureUrl }),
 };
 
 // Appointments API
@@ -85,6 +95,15 @@ export const appointmentsAPI = {
   // Admin-specific endpoint
   getAllAppointments: () =>
     api.get('/appointments'),
+    
+  // New endpoint for billing data
+  getDoctorBilling: (doctorId: string, fromDate?: string, toDate?: string) => {
+    const params = new URLSearchParams();
+    if (fromDate) params.append('from', fromDate);
+    if (toDate) params.append('to', toDate);
+    
+    return api.get(`/appointments/doctor/${doctorId}/billing?${params.toString()}`);
+  }
 };
 
 // Prescriptions API
@@ -100,6 +119,9 @@ export const prescriptionsAPI = {
   
   getPrescriptionById: (id: string) => 
     api.get(`/prescriptions/${id}`),
+    
+  updatePrescriptionSignature: (id: string, signature: string) =>
+    api.patch(`/prescriptions/${id}/signature`, { signature }),
     
   // Admin-specific endpoint
   getAllPrescriptions: () =>
@@ -134,6 +156,16 @@ export const adminAPI = {
     
   updateSystemSettings: (settings: any) =>
     api.put('/admin/settings', settings),
+    
+  // New endpoints for doctor approval
+  getPendingDoctors: () => 
+    api.get('/admin/pending-doctors'),
+    
+  approveDoctorRegistration: (doctorId: string) =>
+    api.post(`/admin/approve-doctor/${doctorId}`),
+    
+  rejectDoctorRegistration: (doctorId: string, reason?: string) =>
+    api.post(`/admin/reject-doctor/${doctorId}`, { reason }),
 };
 
 export default api;

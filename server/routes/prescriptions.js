@@ -56,7 +56,8 @@ router.post('/', async (req, res) => {
       medicines,
       instructions,
       followupDate,
-      status
+      status,
+      doctorSignature // Added doctor signature
     } = req.body;
     
     // If appointment ID is provided, verify it exists
@@ -75,7 +76,8 @@ router.post('/', async (req, res) => {
       medicines,
       instructions,
       followupDate,
-      status: status || 'active'
+      status: status || 'active',
+      doctorSignature // Store doctor signature
     });
     
     await prescription.save();
@@ -118,6 +120,32 @@ router.patch('/:id/status', async (req, res) => {
     const prescription = await Prescription.findByIdAndUpdate(
       req.params.id,
       { status },
+      { new: true }
+    );
+    
+    if (!prescription) {
+      return res.status(404).json({ message: 'Prescription not found' });
+    }
+    
+    res.json(prescription);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Update doctor signature for a prescription
+router.patch('/:id/signature', async (req, res) => {
+  try {
+    const { signature } = req.body;
+    
+    if (!signature) {
+      return res.status(400).json({ message: 'Signature is required' });
+    }
+    
+    const prescription = await Prescription.findByIdAndUpdate(
+      req.params.id,
+      { doctorSignature: signature },
       { new: true }
     );
     

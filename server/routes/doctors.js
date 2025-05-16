@@ -56,7 +56,8 @@ router.post('/', async (req, res) => {
       about,
       profileImage,
       consultationFee,
-      phone
+      phone,
+      signature // Added signature field
     } = req.body;
     
     // Verify the user exists and is a doctor
@@ -81,7 +82,8 @@ router.post('/', async (req, res) => {
           about,
           profileImage,
           consultationFee,
-          phone
+          phone,
+          signature // Update signature if provided
         },
         { new: true }
       );
@@ -97,13 +99,43 @@ router.post('/', async (req, res) => {
         about,
         profileImage,
         consultationFee,
-        phone
+        phone,
+        signature // Store signature if provided
       });
       
       await doctor.save();
     }
     
     res.json(doctor);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Update doctor signature
+router.patch('/:id/signature', async (req, res) => {
+  try {
+    const { signature } = req.body;
+    
+    if (!signature) {
+      return res.status(400).json({ message: 'Signature is required' });
+    }
+    
+    const doctor = await Doctor.findByIdAndUpdate(
+      req.params.id,
+      { signature },
+      { new: true }
+    );
+    
+    if (!doctor) {
+      return res.status(404).json({ message: 'Doctor not found' });
+    }
+    
+    res.json({ 
+      message: 'Signature updated successfully',
+      doctor
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });

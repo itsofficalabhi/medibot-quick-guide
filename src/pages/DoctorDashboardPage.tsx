@@ -1,14 +1,77 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import DoctorSignatureUpload from '@/components/DoctorSignatureUpload';
+import { supabase } from "@/integrations/supabase/client";
+import { doctorsAPI, prescriptionsAPI } from '@/services/api';
+import DoctorPatients from '@/components/DoctorPatients';
+import DoctorPrescriptions from '@/components/DoctorPrescriptions';
+import DoctorBilling from '@/components/DoctorBilling';
+import { useQuery } from '@tanstack/react-query';
+import { Loader2 } from "lucide-react";
 
 const DoctorDashboardPage = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
   const [doctorSignature, setDoctorSignature] = useState<string | undefined>(undefined);
+  const [doctorData, setDoctorData] = useState(null);
+
+  const { data: doctorProfile, isLoading: isLoadingDoctor } = useQuery({
+    queryKey: ['doctorProfile', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      
+      try {
+        // Try to get doctor data from Supabase first
+        const { data: supabaseData, error } = await supabase
+          .from('doctors')
+          .select('*')
+          .eq('user_id', user.id)
+          .single();
+        
+        if (supabaseData) {
+          return supabaseData;
+        }
+        
+        // If not found in Supabase, try MongoDB through our API
+        const response = await doctorsAPI.getDoctorById(user.id);
+        return response.data;
+      } catch (error) {
+        console.error('Error fetching doctor profile:', error);
+        return null;
+      }
+    },
+    enabled: !!user?.id,
+  });
+
+  const { data: prescriptions, isLoading: isLoadingPrescriptions } = useQuery({
+    queryKey: ['doctorPrescriptions', doctorProfile?.id],
+    queryFn: async () => {
+      if (!doctorProfile?.id) return [];
+      
+      try {
+        // Try Supabase first
+        const { data: supabasePrescriptions, error } = await supabase
+          .from('prescriptions')
+          .select('*')
+          .eq('doctor_id', doctorProfile.id);
+        
+        if (supabasePrescriptions?.length) {
+          return supabasePrescriptions;
+        }
+        
+        // If not found in Supabase, try MongoDB through API
+        const response = await prescriptionsAPI.getDoctorPrescriptions(doctorProfile.id);
+        return response.data;
+      } catch (error) {
+        console.error('Error fetching doctor prescriptions:', error);
+        return [];
+      }
+    },
+    enabled: !!doctorProfile?.id,
+  });
 
   // Mock data for the dashboard
   const upcomingAppointments = [
@@ -17,11 +80,17 @@ const DoctorDashboardPage = () => {
     { id: 3, patient: 'Robert Johnson', date: '2025-05-21', time: '09:15 AM', status: 'pending' }
   ];
 
-  const recentPrescriptions = [
+  const recentPrescriptions = prescriptions?.slice(0, 3) || [
     { id: 1, patient: 'John Doe', date: '2025-05-15', diagnosis: 'Common Cold' },
     { id: 2, patient: 'Alice Brown', date: '2025-05-14', diagnosis: 'Hypertension' },
     { id: 3, patient: 'Michael Wilson', date: '2025-05-13', diagnosis: 'Arthritis' }
   ];
+
+  const handleSignatureUpdated = (signatureUrl: string) => {
+    setDoctorSignature(signatureUrl);
+    // In a real implementation, we would save this to the doctor's profile
+    console.log("Signature updated:", signatureUrl);
+  };
 
   if (!user) {
     return (
@@ -34,11 +103,14 @@ const DoctorDashboardPage = () => {
     );
   }
 
-  const handleSignatureUpdated = (signatureUrl: string) => {
-    setDoctorSignature(signatureUrl);
-    // In a real implementation, we would save this to the doctor's profile
-    console.log("Signature updated:", signatureUrl);
-  };
+  if (isLoadingDoctor) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin" />
+        <p className="ml-2">Loading doctor profile...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto py-8">
@@ -53,10 +125,12 @@ const DoctorDashboardPage = () => {
         onValueChange={setActiveTab}
         className="space-y-4"
       >
-        <TabsList className="grid grid-cols-4 md:w-[600px]">
+        <TabsList className="grid grid-cols-6">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="appointments">Appointments</TabsTrigger>
           <TabsTrigger value="patients">Patients</TabsTrigger>
+          <TabsTrigger value="prescriptions">Prescriptions</TabsTrigger>
+          <TabsTrigger value="billing">Billing</TabsTrigger>
           <TabsTrigger value="profile">Profile</TabsTrigger>
         </TabsList>
 
@@ -153,14 +227,18 @@ const DoctorDashboardPage = () => {
         </TabsContent>
 
         <TabsContent value="patients">
-          <Card>
-            <CardHeader>
-              <CardTitle>Patient Records</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p>Patient records and management functionality will be implemented here.</p>
-            </CardContent>
-          </Card>
+          <DoctorPatients doctorId={doctorProfile?.id} />
+        </TabsContent>
+
+        <TabsContent value="prescriptions">
+          <DoctorPrescriptions 
+            doctorId={doctorProfile?.id} 
+            doctorSignature={doctorSignature} 
+          />
+        </TabsContent>
+
+        <TabsContent value="billing">
+          <DoctorBilling doctorId={doctorProfile?.id} />
         </TabsContent>
 
         <TabsContent value="profile" className="space-y-4">
@@ -181,22 +259,22 @@ const DoctorDashboardPage = () => {
                   </div>
                   <div className="grid grid-cols-3 gap-4">
                     <div className="font-medium text-muted-foreground">Specialty:</div>
-                    <div className="col-span-2">Cardiology</div>
+                    <div className="col-span-2">{doctorProfile?.specialty || 'Not specified'}</div>
                   </div>
                   <div className="grid grid-cols-3 gap-4">
                     <div className="font-medium text-muted-foreground">Experience:</div>
-                    <div className="col-span-2">12 years</div>
+                    <div className="col-span-2">{doctorProfile?.experience ? `${doctorProfile.experience} years` : 'Not specified'}</div>
                   </div>
                   <div className="grid grid-cols-3 gap-4">
                     <div className="font-medium text-muted-foreground">Languages:</div>
-                    <div className="col-span-2">English, Spanish</div>
+                    <div className="col-span-2">{doctorProfile?.languages?.join(', ') || 'Not specified'}</div>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
             <DoctorSignatureUpload 
-              doctorId={user.id} 
+              doctorId={doctorProfile?.id || user.id} 
               existingSignature={doctorSignature}
               onSignatureUpdated={handleSignatureUpdated}
             />

@@ -38,7 +38,8 @@ const PrescriptionSchema = new mongoose.Schema({
     enum: ['pending', 'active', 'completed'],
     default: 'active'
   },
-  followupDate: Date
+  followupDate: Date,
+  doctorSignature: String // Added field for doctor's signature
 });
 
 module.exports = mongoose.model('Prescription', PrescriptionSchema);

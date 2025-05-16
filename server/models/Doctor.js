@@ -31,6 +31,7 @@ const DoctorSchema = new mongoose.Schema({
   languages: [String],
   about: String,
   profileImage: String,
+  signature: String, // Added field for doctor's signature
   consultationFee: {
     type: Number,
     required: true

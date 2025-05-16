@@ -3,6 +3,8 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
+import { doctorsAPI } from '@/services/api';
+import { supabase } from '@/integrations/supabase/client';
 
 interface DoctorSignatureUploadProps {
   doctorId: string;
@@ -18,7 +20,7 @@ const DoctorSignatureUpload: React.FC<DoctorSignatureUploadProps> = ({
   const [signature, setSignature] = useState<string | null>(existingSignature || null);
   const [isUploading, setIsUploading] = useState(false);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -36,24 +38,73 @@ const DoctorSignatureUpload: React.FC<DoctorSignatureUploadProps> = ({
 
     setIsUploading(true);
     
-    // Create a preview of the image
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const result = e.target?.result as string;
-      setSignature(result);
-      
-      // In a real implementation, we would upload to server here
-      // For now, we'll simulate a successful upload
-      setTimeout(() => {
-        setIsUploading(false);
-        toast.success('Signature uploaded successfully');
-        if (onSignatureUpdated) {
-          onSignatureUpdated(result);
+    try {
+      // Create a preview of the image
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const result = e.target?.result as string;
+        setSignature(result);
+        
+        try {
+          // First try to save to Supabase
+          if (supabase) {
+            // Check if we have a storage bucket for signatures
+            try {
+              // Upload to Supabase Storage
+              const { data: storageData, error: storageError } = await supabase.storage
+                .from('signatures')
+                .upload(`doctor-${doctorId}-${Date.now()}.png`, file);
+                
+              if (storageData) {
+                // Get public URL
+                const { data: urlData } = await supabase.storage
+                  .from('signatures')
+                  .getPublicUrl(storageData.path);
+                  
+                if (urlData?.publicUrl) {
+                  // Update in Supabase database
+                  await supabase
+                    .from('doctors')
+                    .update({ signature: urlData.publicUrl })
+                    .eq('id', doctorId);
+                    
+                  if (onSignatureUpdated) {
+                    onSignatureUpdated(urlData.publicUrl);
+                  }
+                  
+                  setIsUploading(false);
+                  toast.success('Signature uploaded successfully');
+                  return;
+                }
+              }
+            } catch (err) {
+              console.error('Supabase storage error:', err);
+              // Continue with base64 approach if storage fails
+            }
+          }
+          
+          // If Supabase approach failed, use base64 and MongoDB
+          await doctorsAPI.updateDoctorSignature(doctorId, result);
+          
+          if (onSignatureUpdated) {
+            onSignatureUpdated(result);
+          }
+          
+          toast.success('Signature uploaded successfully');
+        } catch (error) {
+          console.error('Error saving signature:', error);
+          toast.error('Failed to save signature. Please try again.');
+        } finally {
+          setIsUploading(false);
         }
-      }, 1000);
-    };
-    
-    reader.readAsDataURL(file);
+      };
+      
+      reader.readAsDataURL(file);
+    } catch (error) {
+      console.error('Error processing image:', error);
+      toast.error('Failed to process the image. Please try again.');
+      setIsUploading(false);
+    }
   };
 
   return (

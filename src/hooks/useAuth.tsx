@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { authAPI } from '@/services/api';
 import { toast } from "sonner";
@@ -15,7 +16,7 @@ interface AuthContextType {
   isLoading: boolean;
   token: string | null;
   login: (email: string, password: string) => Promise<boolean>;
-  register: (name: string, email: string, password: string, mobile?: string) => Promise<boolean>;
+  register: (name: string, email: string, password: string, mobile?: string, role?: string) => Promise<boolean>;
   logout: () => void;
   forgotPassword: (email: string) => Promise<boolean>;
   isAdmin: () => boolean;
@@ -288,10 +289,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const register = async (name: string, email: string, password: string, mobile?: string) => {
+  const register = async (name: string, email: string, password: string, mobile?: string, role: string = 'user') => {
     try {
       // Try to register with the API
-      const response = await authAPI.register(name, email, password, 'user', mobile);
+      const response = await authAPI.register(name, email, password, role, mobile);
       
       if (response.data && response.data.user && response.data.token) {
         const userInfo = {
@@ -306,7 +307,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(userInfo));
         localStorage.setItem(TOKEN_STORAGE_KEY, response.data.token);
         
-        toast.success("Registration Successful", {
+        toast.success(`${role === 'doctor' ? 'Doctor Registration' : 'Registration'} Successful`, {
           description: "Welcome to MediClinic!"
         });
         return true;
@@ -322,7 +323,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         id: `user${Date.now()}`,
         name,
         email,
-        role: 'user' as const
+        role: role as 'user' | 'doctor' | 'admin'
       };
       
       setUser(newUser);
@@ -332,7 +333,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(newUser));
       localStorage.setItem(TOKEN_STORAGE_KEY, mockToken);
       
-      toast.success("Registration Successful (Demo Mode)", {
+      toast.success(`${role === 'doctor' ? 'Doctor Registration' : 'Registration'} Successful (Demo Mode)`, {
           description: "Using mock data since API connection failed."
       });
       return true;

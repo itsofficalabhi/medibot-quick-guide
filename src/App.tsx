@@ -11,6 +11,8 @@ import DoctorsPage from "./pages/DoctorsPage";
 import DoctorProfilePage from "./pages/DoctorProfilePage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
+import DoctorRegisterPage from "./pages/DoctorRegisterPage";
+import DoctorPendingApprovalPage from "./pages/DoctorPendingApprovalPage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import UserDashboardPage from "./pages/UserDashboardPage";
 import DoctorDashboardPage from "./pages/DoctorDashboardPage";
@@ -42,6 +44,8 @@ const App = () => {
                 <Route path="chat" element={<ChatPage />} />
                 <Route path="login" element={<LoginPage />} />
                 <Route path="register" element={<RegisterPage />} />
+                <Route path="register-doctor" element={<DoctorRegisterPage />} />
+                <Route path="doctor-pending-approval" element={<DoctorPendingApprovalPage />} />
                 <Route path="forgot-password" element={<ForgotPasswordPage />} />
                 
                 {/* Protected routes with role-based redirection */}

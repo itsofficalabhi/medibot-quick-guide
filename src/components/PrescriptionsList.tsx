@@ -6,7 +6,6 @@ import { FileText, Calendar } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/use-toast';
-import { format } from 'date-fns';
 import {
   Select,
   SelectContent,
@@ -49,7 +48,18 @@ const PrescriptionsList: React.FC<PrescriptionsListProps> = ({ userId, userRole 
   const getPrescriptions = () => {
     if (userRole === 'doctor') {
       // For doctors, get all prescriptions they created
-      return JSON.parse(localStorage.getItem('prescriptions') || '[]');
+      const allPrescriptions = JSON.parse(localStorage.getItem('prescriptions') || '[]');
+      // Add doctor signature to prescriptions if available
+      const doctorSignature = localStorage.getItem(`doctor_signature_${userId}`);
+      if (doctorSignature) {
+        return allPrescriptions.map((p: Prescription) => {
+          if (p.doctorId === userId && !p.doctorSignature) {
+            return { ...p, doctorSignature };
+          }
+          return p;
+        });
+      }
+      return allPrescriptions;
     } else {
       // For patients, get only their prescriptions
       return JSON.parse(localStorage.getItem(`prescriptions_${userId}`) || '[]');

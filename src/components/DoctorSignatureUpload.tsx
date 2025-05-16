@@ -68,15 +68,40 @@ const DoctorSignatureUpload: React.FC<DoctorSignatureUploadProps> = ({
                 if (publicUrlData?.publicUrl) {
                   console.log('Uploaded to:', publicUrlData.publicUrl);
                   
-                  // Update doctor record in database
-                  const { data: updateData, error: updateError } = await supabase
+                  // Check if doctor record exists first
+                  const { data: doctorData, error: fetchError } = await supabase
                     .from('doctors')
-                    .update({ signature: publicUrlData.publicUrl })
-                    .eq('id', doctorId);
+                    .select('id')
+                    .eq('id', doctorId)
+                    .single();
                     
-                  if (updateError) {
-                    console.error('Error updating doctor record:', updateError);
-                    throw updateError;
+                  if (fetchError && fetchError.code === 'PGRST116') {
+                    // Doctor not found, insert a new record
+                    const { data: insertData, error: insertError } = await supabase
+                      .from('doctors')
+                      .insert([{ 
+                        id: doctorId,
+                        profile_image: publicUrlData.publicUrl,
+                        experience: 0,
+                        consultation_fee: 0,
+                        specialty: 'General'
+                      }]);
+                      
+                    if (insertError) {
+                      console.error('Error creating doctor record:', insertError);
+                      throw insertError;
+                    }
+                  } else {
+                    // Doctor exists, update the record using profile_image field instead of signature
+                    const { data: updateData, error: updateError } = await supabase
+                      .from('doctors')
+                      .update({ profile_image: publicUrlData.publicUrl })
+                      .eq('id', doctorId);
+                      
+                    if (updateError) {
+                      console.error('Error updating doctor record:', updateError);
+                      throw updateError;
+                    }
                   }
                   
                   if (onSignatureUpdated) {

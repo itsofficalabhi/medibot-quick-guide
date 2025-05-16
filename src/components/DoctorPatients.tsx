@@ -22,6 +22,7 @@ import { Loader2, UserPlus, Search } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { v4 as uuidv4 } from 'uuid';
 
 interface DoctorPatientsProps {
   doctorId?: string;
@@ -60,8 +61,7 @@ const DoctorPatients: React.FC<DoctorPatientsProps> = ({ doctorId }) => {
         // Get profiles with associated appointments for this doctor
         const { data: profileData, error } = await supabase
           .from('profiles')
-          .select('id, first_name, last_name, date_of_birth, address, city')
-          .eq('id', doctorId);
+          .select('id, first_name, last_name, date_of_birth, address, city');
 
         if (profileData?.length) {
           return profileData.map((p) => ({
@@ -97,13 +97,22 @@ const DoctorPatients: React.FC<DoctorPatientsProps> = ({ doctorId }) => {
     e.preventDefault();
     
     try {
-      // Create a new profile entry
+      // Split the name into first and last name
+      const nameParts = newPatient.name.split(' ');
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
+      
+      // Generate a UUID for the new patient
+      const patientId = uuidv4();
+      
+      // Create a new profile entry with the required id field
       const { data, error } = await supabase
         .from('profiles')
         .insert([
           {
-            first_name: newPatient.name.split(' ')[0] || '',
-            last_name: newPatient.name.split(' ').slice(1).join(' ') || '',
+            id: patientId,
+            first_name: firstName,
+            last_name: lastName,
             address: newPatient.address,
             date_of_birth: newPatient.dateOfBirth,
           }

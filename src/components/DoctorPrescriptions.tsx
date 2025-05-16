@@ -235,12 +235,13 @@ const DoctorPrescriptions: React.FC<DoctorPrescriptionsProps> = ({ doctorId, doc
     }
 
     try {
-      // Format data for prescription
+      // Format data for prescription - convert medicines to JSON compatible format
       const prescriptionData = {
         patient_id: newPrescription.patientId,
         doctor_id: doctorId,
         diagnosis: newPrescription.diagnosis,
-        medicines: newPrescription.medicines,
+        // Ensure medicines is correctly formatted as a JSON object
+        medicines: JSON.parse(JSON.stringify(newPrescription.medicines)),
         instructions: newPrescription.instructions,
         date: new Date().toISOString(),
         appointment_id: null

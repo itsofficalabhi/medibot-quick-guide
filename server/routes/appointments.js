@@ -164,7 +164,8 @@ router.post('/', async (req, res) => {
       type,
       amount,
       status = 'scheduled',
-      paymentStatus = 'pending'
+      paymentStatus = 'pending',
+      notes
     } = req.body;
     
     // Verify patient exists
@@ -194,6 +195,18 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ message: 'Invalid doctor ID' });
     }
     
+    // Check for scheduling conflicts
+    const conflictingAppointment = await Appointment.findOne({
+      doctorId: doctor._id,
+      date: new Date(date),
+      time,
+      status: { $ne: 'cancelled' }
+    });
+    
+    if (conflictingAppointment) {
+      return res.status(400).json({ message: 'Doctor already has an appointment at this time' });
+    }
+    
     // Create appointment
     const appointment = new Appointment({
       patientId: patient._id,
@@ -203,12 +216,24 @@ router.post('/', async (req, res) => {
       type,
       amount,
       status,
-      paymentStatus
+      paymentStatus,
+      notes
     });
     
     await appointment.save();
     
-    res.status(201).json(appointment);
+    // Return the appointment with populated patient and doctor info
+    const populatedAppointment = await Appointment.findById(appointment._id)
+      .populate('patientId', 'name email')
+      .populate({
+        path: 'doctorId',
+        populate: {
+          path: 'userId',
+          select: 'name email'
+        }
+      });
+    
+    res.status(201).json(populatedAppointment);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });
@@ -218,21 +243,36 @@ router.post('/', async (req, res) => {
 // Update appointment status
 router.put('/:id', async (req, res) => {
   try {
-    const { status, paymentStatus, paymentId, meetingLink } = req.body;
+    const { status, paymentStatus, paymentId, meetingLink, notes } = req.body;
     
+    // Find appointment
     const appointment = await Appointment.findById(req.params.id);
     if (!appointment) {
       return res.status(404).json({ message: 'Appointment not found' });
     }
     
+    // Update appointment fields
     if (status) appointment.status = status;
     if (paymentStatus) appointment.paymentStatus = paymentStatus;
     if (paymentId) appointment.paymentId = paymentId;
     if (meetingLink) appointment.meetingLink = meetingLink;
+    if (notes) appointment.notes = notes;
     
+    // Save updated appointment
     await appointment.save();
     
-    res.json(appointment);
+    // Return updated appointment with populated info
+    const updatedAppointment = await Appointment.findById(appointment._id)
+      .populate('patientId', 'name email')
+      .populate({
+        path: 'doctorId',
+        populate: {
+          path: 'userId',
+          select: 'name email'
+        }
+      });
+    
+    res.json(updatedAppointment);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });
@@ -250,6 +290,64 @@ router.delete('/:id', async (req, res) => {
     await appointment.deleteOne();
     
     res.json({ message: 'Appointment deleted' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Get appointment statistics for admin dashboard
+router.get('/stats/admin', async (req, res) => {
+  try {
+    // Get counts by status
+    const totalAppointments = await Appointment.countDocuments();
+    const completedAppointments = await Appointment.countDocuments({ status: 'completed' });
+    const scheduledAppointments = await Appointment.countDocuments({ status: 'scheduled' });
+    const cancelledAppointments = await Appointment.countDocuments({ status: 'cancelled' });
+    
+    // Get counts by payment status
+    const paidAppointments = await Appointment.countDocuments({ paymentStatus: 'paid' });
+    const pendingPayments = await Appointment.countDocuments({ paymentStatus: 'pending' });
+    
+    // Get total revenue
+    const appointments = await Appointment.find({ paymentStatus: 'paid' });
+    const totalRevenue = appointments.reduce((sum, apt) => sum + apt.amount, 0);
+    
+    // Get today's appointments
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    
+    const endOfToday = new Date();
+    endOfToday.setHours(23, 59, 59, 999);
+    
+    const todayAppointments = await Appointment.countDocuments({
+      date: { $gte: startOfToday, $lte: endOfToday }
+    });
+    
+    // Get recent appointments
+    const recentAppointments = await Appointment.find()
+      .populate('patientId', 'name email')
+      .populate({
+        path: 'doctorId',
+        populate: {
+          path: 'userId',
+          select: 'name email'
+        }
+      })
+      .sort({ date: -1 })
+      .limit(5);
+    
+    res.json({
+      totalAppointments,
+      completedAppointments,
+      scheduledAppointments,
+      cancelledAppointments,
+      paidAppointments,
+      pendingPayments,
+      totalRevenue,
+      todayAppointments,
+      recentAppointments
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });

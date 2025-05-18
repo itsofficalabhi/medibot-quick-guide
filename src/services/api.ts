@@ -70,9 +70,18 @@ export const doctorsAPI = {
   addPatient: (patientData: any) =>
     api.post('/doctors/add-patient', patientData),
     
-  // New method to update doctor signature
+  // Method to update doctor signature
   updateDoctorSignature: (doctorId: string, signatureUrl: string) =>
     api.patch(`/doctors/${doctorId}/signature`, { signature: signatureUrl }),
+    
+  // New methods for billing and statistics
+  getDoctorBillingStats: (doctorId: string, fromDate?: string, toDate?: string) => {
+    const params = new URLSearchParams();
+    if (fromDate) params.append('from', fromDate);
+    if (toDate) params.append('to', toDate);
+    
+    return api.get(`/doctors/${doctorId}/billing-stats?${params.toString()}`);
+  }
 };
 
 // Appointments API
@@ -96,14 +105,18 @@ export const appointmentsAPI = {
   getAllAppointments: () =>
     api.get('/appointments'),
     
-  // New endpoint for billing data
+  // Endpoint for billing data
   getDoctorBilling: (doctorId: string, fromDate?: string, toDate?: string) => {
     const params = new URLSearchParams();
     if (fromDate) params.append('from', fromDate);
     if (toDate) params.append('to', toDate);
     
     return api.get(`/appointments/doctor/${doctorId}/billing?${params.toString()}`);
-  }
+  },
+  
+  // Get appointment statistics for admin dashboard
+  getAppointmentStats: () =>
+    api.get('/appointments/stats/admin'),
 };
 
 // Prescriptions API
@@ -157,7 +170,7 @@ export const adminAPI = {
   updateSystemSettings: (settings: any) =>
     api.put('/admin/settings', settings),
     
-  // New endpoints for doctor approval
+  // Endpoints for doctor approval
   getPendingDoctors: () => 
     api.get('/admin/pending-doctors'),
     
@@ -166,6 +179,21 @@ export const adminAPI = {
     
   rejectDoctorRegistration: (doctorId: string, reason?: string) =>
     api.post(`/admin/reject-doctor/${doctorId}`, { reason }),
+};
+
+// Patient API
+export const patientAPI = {
+  getPatientProfile: (patientId: string) =>
+    api.get(`/patients/${patientId}`),
+    
+  updatePatientProfile: (patientId: string, profileData: any) =>
+    api.put(`/patients/${patientId}`, profileData),
+    
+  getPatientMedicalRecords: (patientId: string) =>
+    api.get(`/patients/${patientId}/medical-records`),
+    
+  addMedicalRecord: (patientId: string, recordData: any) =>
+    api.post(`/patients/${patientId}/medical-records`, recordData)
 };
 
 export default api;

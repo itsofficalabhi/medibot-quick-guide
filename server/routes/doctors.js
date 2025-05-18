@@ -57,7 +57,7 @@ router.post('/', async (req, res) => {
       profileImage,
       consultationFee,
       phone,
-      signature // Added signature field
+      signature
     } = req.body;
     
     // Verify the user exists and is a doctor
@@ -83,7 +83,7 @@ router.post('/', async (req, res) => {
           profileImage,
           consultationFee,
           phone,
-          signature // Update signature if provided
+          signature
         },
         { new: true }
       );
@@ -100,7 +100,7 @@ router.post('/', async (req, res) => {
         profileImage,
         consultationFee,
         phone,
-        signature // Store signature if provided
+        signature
       });
       
       await doctor.save();
@@ -122,14 +122,29 @@ router.patch('/:id/signature', async (req, res) => {
       return res.status(400).json({ message: 'Signature is required' });
     }
     
-    const doctor = await Doctor.findByIdAndUpdate(
-      req.params.id,
-      { signature },
-      { new: true }
-    );
+    // Try to find by MongoDB ObjectId first
+    let doctor = await Doctor.findById(req.params.id);
+    
+    // If not found, try to find by userId
+    if (!doctor) {
+      doctor = await Doctor.findOne({ userId: req.params.id });
+    }
     
     if (!doctor) {
-      return res.status(404).json({ message: 'Doctor not found' });
+      // Doctor not found, create a new one with minimal info
+      doctor = new Doctor({
+        userId: req.params.id,
+        specialty: 'General',
+        experience: 0,
+        consultationFee: 0,
+        signature
+      });
+      
+      await doctor.save();
+    } else {
+      // Update existing doctor's signature
+      doctor.signature = signature;
+      await doctor.save();
     }
     
     res.json({ 
@@ -163,7 +178,7 @@ router.post('/add-patient', async (req, res) => {
       role: 'patient'
     });
     
-    // Hash password before saving
+    // Hash password before saving (handled by User schema pre-save hook)
     await user.save();
     
     res.status(201).json({ 
@@ -193,7 +208,7 @@ router.get('/:id/patients', async (req, res) => {
     // Get patient details
     const patients = await User.find({
       _id: { $in: patientIds },
-      role: 'patient'
+      role: 'user'
     }).select('name email phone');
     
     res.json(patients);

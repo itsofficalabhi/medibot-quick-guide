@@ -9,6 +9,7 @@ import { doctorsAPI, prescriptionsAPI } from '@/services/api';
 import DoctorPatients from '@/components/DoctorPatients';
 import DoctorPrescriptions from '@/components/DoctorPrescriptions';
 import DoctorBilling from '@/components/DoctorBilling';
+import DoctorAppointments from '@/components/DoctorAppointments';
 import { useQuery } from '@tanstack/react-query';
 import { Loader2 } from "lucide-react";
 
@@ -73,18 +74,15 @@ const DoctorDashboardPage = () => {
     enabled: !!doctorProfile?.id,
   });
 
-  // Mock data for the dashboard
-  const upcomingAppointments = [
-    { id: 1, patient: 'John Doe', date: '2025-05-20', time: '10:00 AM', status: 'confirmed' },
-    { id: 2, patient: 'Jane Smith', date: '2025-05-20', time: '11:30 AM', status: 'confirmed' },
-    { id: 3, patient: 'Robert Johnson', date: '2025-05-21', time: '09:15 AM', status: 'pending' }
-  ];
-
-  const recentPrescriptions = prescriptions?.slice(0, 3) || [
-    { id: 1, patient: 'John Doe', date: '2025-05-15', diagnosis: 'Common Cold' },
-    { id: 2, patient: 'Alice Brown', date: '2025-05-14', diagnosis: 'Hypertension' },
-    { id: 3, patient: 'Michael Wilson', date: '2025-05-13', diagnosis: 'Arthritis' }
-  ];
+  // Mock data for the dashboard statistics
+  const dashboardStats = {
+    todayAppointments: 8,
+    remainingToday: 3,
+    totalPatients: 153,
+    newPatientsThisMonth: 12,
+    earningsThisMonth: 4385,
+    earningsGrowth: 20
+  };
 
   const handleSignatureUpdated = (signatureUrl: string) => {
     setDoctorSignature(signatureUrl);
@@ -141,8 +139,10 @@ const DoctorDashboardPage = () => {
                 <CardTitle className="text-sm font-medium">Today's Appointments</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">8</div>
-                <p className="text-xs text-muted-foreground">3 remaining for today</p>
+                <div className="text-2xl font-bold">{dashboardStats.todayAppointments}</div>
+                <p className="text-xs text-muted-foreground">
+                  {dashboardStats.remainingToday} remaining for today
+                </p>
               </CardContent>
             </Card>
             <Card>
@@ -150,8 +150,10 @@ const DoctorDashboardPage = () => {
                 <CardTitle className="text-sm font-medium">Total Patients</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">153</div>
-                <p className="text-xs text-muted-foreground">+12 this month</p>
+                <div className="text-2xl font-bold">{dashboardStats.totalPatients}</div>
+                <p className="text-xs text-muted-foreground">
+                  +{dashboardStats.newPatientsThisMonth} this month
+                </p>
               </CardContent>
             </Card>
             <Card>
@@ -159,56 +161,55 @@ const DoctorDashboardPage = () => {
                 <CardTitle className="text-sm font-medium">Earnings this Month</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">$4,385</div>
-                <p className="text-xs text-muted-foreground">+20% from last month</p>
+                <div className="text-2xl font-bold">${dashboardStats.earningsThisMonth}</div>
+                <p className="text-xs text-muted-foreground">
+                  +{dashboardStats.earningsGrowth}% from last month
+                </p>
               </CardContent>
             </Card>
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Upcoming Appointments</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {upcomingAppointments.map(appointment => (
-                    <div key={appointment.id} className="flex items-center justify-between border-b pb-2">
-                      <div>
-                        <p className="font-medium">{appointment.patient}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {appointment.date} at {appointment.time}
-                        </p>
-                      </div>
-                      <div className={`px-2 py-1 rounded-md text-xs ${
-                        appointment.status === 'confirmed' 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {appointment.status}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+            <DoctorAppointments doctorId={doctorProfile?.id || user?.id} />
+            
             <Card>
               <CardHeader>
                 <CardTitle>Recent Prescriptions</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {recentPrescriptions.map(prescription => (
-                    <div key={prescription.id} className="flex items-center justify-between border-b pb-2">
-                      <div>
-                        <p className="font-medium">{prescription.patient}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {prescription.diagnosis} - {prescription.date}
-                        </p>
+                  {isLoadingPrescriptions ? (
+                    Array(3).fill(0).map((_, i) => (
+                      <div key={i} className="flex items-center justify-between border-b pb-2">
+                        <div className="animate-pulse">
+                          <div className="h-4 w-32 bg-gray-200 rounded mb-1"></div>
+                          <div className="h-3 w-24 bg-gray-100 rounded"></div>
+                        </div>
+                        <div className="animate-pulse">
+                          <div className="h-4 w-10 bg-primary/20 rounded"></div>
+                        </div>
                       </div>
-                      <button className="text-primary text-sm">View</button>
-                    </div>
-                  ))}
+                    ))
+                  ) : prescriptions?.length > 0 ? (
+                    prescriptions.slice(0, 3).map((prescription: any) => (
+                      <div key={prescription.id} className="flex items-center justify-between border-b pb-2">
+                        <div>
+                          <p className="font-medium">{prescription.patientName || "Patient"}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {prescription.diagnosis} - {new Date(prescription.date).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <button 
+                          className="text-primary text-sm"
+                          onClick={() => setActiveTab('prescriptions')}
+                        >
+                          View
+                        </button>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-center py-4 text-muted-foreground">No prescriptions found</p>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -216,29 +217,22 @@ const DoctorDashboardPage = () => {
         </TabsContent>
 
         <TabsContent value="appointments">
-          <Card>
-            <CardHeader>
-              <CardTitle>Manage Appointments</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p>Appointment management functionality will be implemented here.</p>
-            </CardContent>
-          </Card>
+          <DoctorAppointments doctorId={doctorProfile?.id || user?.id} />
         </TabsContent>
 
         <TabsContent value="patients">
-          <DoctorPatients doctorId={doctorProfile?.id} />
+          <DoctorPatients doctorId={doctorProfile?.id || user?.id} />
         </TabsContent>
 
         <TabsContent value="prescriptions">
           <DoctorPrescriptions 
-            doctorId={doctorProfile?.id} 
+            doctorId={doctorProfile?.id || user?.id} 
             doctorSignature={doctorSignature} 
           />
         </TabsContent>
 
         <TabsContent value="billing">
-          <DoctorBilling doctorId={doctorProfile?.id} />
+          <DoctorBilling doctorId={doctorProfile?.id || user?.id} />
         </TabsContent>
 
         <TabsContent value="profile" className="space-y-4">
@@ -275,7 +269,7 @@ const DoctorDashboardPage = () => {
 
             <DoctorSignatureUpload 
               doctorId={doctorProfile?.id || user.id} 
-              existingSignature={doctorSignature}
+              existingSignature={doctorSignature || doctorProfile?.profile_image || doctorProfile?.signature}
               onSignatureUpdated={handleSignatureUpdated}
             />
           </div>

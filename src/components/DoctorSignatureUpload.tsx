@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { doctorsAPI } from '@/services/api';
 import { supabase } from '@/integrations/supabase/client';
+import { v4 as uuidv4 } from 'uuid';
 
 interface DoctorSignatureUploadProps {
   doctorId: string;
@@ -104,6 +105,15 @@ const DoctorSignatureUpload: React.FC<DoctorSignatureUploadProps> = ({
                     }
                   }
                   
+                  // Also save to MongoDB
+                  try {
+                    await doctorsAPI.updateDoctorSignature(doctorId, publicUrlData.publicUrl);
+                    console.log("Signature saved to MongoDB");
+                  } catch (mongoErr) {
+                    console.error("Failed to save signature to MongoDB:", mongoErr);
+                    // Continue since we already saved to Supabase
+                  }
+                  
                   if (onSignatureUpdated) {
                     onSignatureUpdated(publicUrlData.publicUrl);
                   }
@@ -115,11 +125,11 @@ const DoctorSignatureUpload: React.FC<DoctorSignatureUploadProps> = ({
               }
             } catch (storageErr) {
               console.error('Storage upload error:', storageErr);
-              // Continue with base64 approach
+              // Continue with MongoDB approach
             }
           }
           
-          // Fallback to API if Supabase storage approach fails
+          // Fallback to MongoDB through API
           try {
             await doctorsAPI.updateDoctorSignature(doctorId, result);
             

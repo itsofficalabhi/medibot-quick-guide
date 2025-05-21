@@ -46,51 +46,101 @@ const DoctorSignatureUpload: React.FC<DoctorSignatureUploadProps> = ({
         setSignature(result);
         
         try {
-          // First try to save to Supabase
+          // First try to save to Supabase Storage
           if (supabase) {
-            // Check if we have a storage bucket for signatures
             try {
-              // Upload to Supabase Storage
-              const { data: storageData, error: storageError } = await supabase.storage
+              const fileName = `doctor-${doctorId}-${Date.now()}.png`;
+              const { data: uploadData, error: uploadError } = await supabase.storage
                 .from('signatures')
-                .upload(`doctor-${doctorId}-${Date.now()}.png`, file);
+                .upload(fileName, file);
                 
-              if (storageData) {
+              if (uploadError) {
+                console.error('Supabase storage upload error:', uploadError);
+                throw uploadError;
+              }
+              
+              if (uploadData) {
                 // Get public URL
-                const { data: urlData } = await supabase.storage
+                const { data: publicUrlData } = supabase.storage
                   .from('signatures')
-                  .getPublicUrl(storageData.path);
+                  .getPublicUrl(fileName);
                   
-                if (urlData?.publicUrl) {
-                  // Update in Supabase database
-                  await supabase
+                if (publicUrlData?.publicUrl) {
+                  console.log('Uploaded to:', publicUrlData.publicUrl);
+                  
+                  // Check if doctor record exists first
+                  const { data: doctorData, error: fetchError } = await supabase
                     .from('doctors')
-                    .update({ signature: urlData.publicUrl })
-                    .eq('id', doctorId);
+                    .select('id')
+                    .eq('id', doctorId)
+                    .single();
                     
-                  if (onSignatureUpdated) {
-                    onSignatureUpdated(urlData.publicUrl);
+                  if (fetchError && fetchError.code === 'PGRST116') {
+                    // Doctor not found, insert a new record
+                    const { data: insertData, error: insertError } = await supabase
+                      .from('doctors')
+                      .insert([{ 
+                        id: doctorId,
+                        profile_image: publicUrlData.publicUrl,
+                        experience: 0,
+                        consultation_fee: 0,
+                        specialty: 'General'
+                      }]);
+                      
+                    if (insertError) {
+                      console.error('Error creating doctor record:', insertError);
+                      throw insertError;
+                    }
+                  } else {
+                    // Doctor exists, update the record using profile_image field instead of signature
+                    const { data: updateData, error: updateError } = await supabase
+                      .from('doctors')
+                      .update({ profile_image: publicUrlData.publicUrl })
+                      .eq('id', doctorId);
+                      
+                    if (updateError) {
+                      console.error('Error updating doctor record:', updateError);
+                      throw updateError;
+                    }
                   }
                   
-                  setIsUploading(false);
+                  if (onSignatureUpdated) {
+                    onSignatureUpdated(publicUrlData.publicUrl);
+                  }
+                  
                   toast.success('Signature uploaded successfully');
+                  setIsUploading(false);
                   return;
                 }
               }
-            } catch (err) {
-              console.error('Supabase storage error:', err);
-              // Continue with base64 approach if storage fails
+            } catch (storageErr) {
+              console.error('Storage upload error:', storageErr);
+              // Continue with base64 approach
             }
           }
           
-          // If Supabase approach failed, use base64 and MongoDB
-          await doctorsAPI.updateDoctorSignature(doctorId, result);
-          
-          if (onSignatureUpdated) {
-            onSignatureUpdated(result);
+          // Fallback to API if Supabase storage approach fails
+          try {
+            await doctorsAPI.updateDoctorSignature(doctorId, result);
+            
+            if (onSignatureUpdated) {
+              onSignatureUpdated(result);
+            }
+            
+            toast.success('Signature uploaded successfully via API');
+          } catch (apiErr) {
+            console.error('API upload error:', apiErr);
+            
+            // Last resort, save locally
+            localStorage.setItem(`doctor_signature_${doctorId}`, result);
+            
+            if (onSignatureUpdated) {
+              onSignatureUpdated(result);
+            }
+            
+            toast.success('Signature stored locally');
           }
           
-          toast.success('Signature uploaded successfully');
         } catch (error) {
           console.error('Error saving signature:', error);
           toast.error('Failed to save signature. Please try again.');

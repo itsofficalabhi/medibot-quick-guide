@@ -10,8 +10,6 @@ const doctorRoutes = require('./routes/doctors');
 const appointmentRoutes = require('./routes/appointments');
 const prescriptionRoutes = require('./routes/prescriptions');
 const chatRoutes = require('./routes/chat');
-const adminRoutes = require('./routes/admin');
-const patientRoutes = require('./routes/patients');
 
 // Load environment variables
 dotenv.config();
@@ -38,8 +36,6 @@ app.use('/api/doctors', doctorRoutes);
 app.use('/api/appointments', appointmentRoutes);
 app.use('/api/prescriptions', prescriptionRoutes);
 app.use('/api/chat', chatRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/patients', patientRoutes);
 
 // Basic route
 app.get('/', (req, res) => {
@@ -52,15 +48,6 @@ app.get('/health', (req, res) => {
     status: 'ok', 
     message: 'MediClinic API is operational',
     mongodb: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
-  });
-});
-
-// Global error handler
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({
-    message: 'An unexpected error occurred',
-    error: process.env.NODE_ENV === 'development' ? err.message : undefined
   });
 });
 

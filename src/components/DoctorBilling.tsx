@@ -55,7 +55,7 @@ const DoctorBilling: React.FC<DoctorBillingProps> = ({ doctorId }) => {
       if (!doctorId) return [];
       
       try {
-        // Try Supabase query
+        // Try Supabase first
         const { data: supabaseBilling, error } = await supabase
           .from('appointments')
           .select(`
@@ -65,7 +65,9 @@ const DoctorBilling: React.FC<DoctorBillingProps> = ({ doctorId }) => {
             type,
             amount,
             payment_status,
-            patient_id
+            patients (
+              profiles (first_name, last_name)
+            )
           `)
           .eq('doctor_id', doctorId)
           .gte('date', dateRange.from)
@@ -73,30 +75,11 @@ const DoctorBilling: React.FC<DoctorBillingProps> = ({ doctorId }) => {
           .order('date', { ascending: false });
 
         if (supabaseBilling?.length) {
-          // Fetch patient names separately if available
-          const patientIds = supabaseBilling.map(record => record.patient_id).filter(Boolean);
-          
-          let patientMap: Record<string, string> = {};
-          
-          if (patientIds.length > 0) {
-            const { data: profilesData } = await supabase
-              .from('profiles')
-              .select('id, first_name, last_name')
-              .in('id', patientIds);
-              
-            if (profilesData) {
-              patientMap = profilesData.reduce((map: Record<string, string>, profile) => {
-                map[profile.id] = `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Unknown';
-                return map;
-              }, {});
-            }
-          }
-          
           return supabaseBilling.map(record => ({
             id: record.id,
-            patientName: record.patient_id && patientMap[record.patient_id] 
-              ? patientMap[record.patient_id]
-              : 'Unknown Patient',
+            patientName: record.patients ? 
+              `${record.patients.profiles.first_name} ${record.patients.profiles.last_name}` : 
+              'Unknown Patient',
             appointmentDate: new Date(record.date).toLocaleDateString() + ' ' + record.time,
             appointmentType: record.type,
             amount: record.amount,

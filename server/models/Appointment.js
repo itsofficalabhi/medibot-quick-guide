@@ -22,17 +22,17 @@ const AppointmentSchema = new mongoose.Schema({
   },
   type: {
     type: String,
-    enum: ['video', 'phone', 'chat', 'in-person'],
+    enum: ['video', 'phone', 'chat'],
     required: true
   },
   status: {
     type: String,
-    enum: ['scheduled', 'completed', 'cancelled', 'no-show'],
+    enum: ['scheduled', 'completed', 'cancelled'],
     default: 'scheduled'
   },
   paymentStatus: {
     type: String,
-    enum: ['pending', 'paid', 'refunded', 'failed'],
+    enum: ['pending', 'paid'],
     default: 'pending'
   },
   paymentId: String,
@@ -41,21 +41,10 @@ const AppointmentSchema = new mongoose.Schema({
     required: true
   },
   meetingLink: String,
-  notes: String,
   createdAt: {
     type: Date,
     default: Date.now
-  },
-  updatedAt: {
-    type: Date,
-    default: Date.now
   }
-});
-
-// Update the updatedAt timestamp before saving
-AppointmentSchema.pre('save', function(next) {
-  this.updatedAt = new Date();
-  next();
 });
 
 module.exports = mongoose.model('Appointment', AppointmentSchema);

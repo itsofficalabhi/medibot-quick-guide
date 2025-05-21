@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Loader2, FileText, Search, ClipboardEdit } from 'lucide-react';
+import { Loader2, FileText, Search, Prescription } from 'lucide-react';
 import { 
   Dialog, 
   DialogContent, 
@@ -51,11 +51,6 @@ interface PrescriptionFormData {
   followupDate?: string;
 }
 
-interface Patient {
-  id: string;
-  name: string;
-}
-
 const DoctorPrescriptions: React.FC<DoctorPrescriptionsProps> = ({ doctorId, doctorSignature }) => {
   const [isCreatingPrescription, setIsCreatingPrescription] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -76,24 +71,25 @@ const DoctorPrescriptions: React.FC<DoctorPrescriptionsProps> = ({ doctorId, doc
       if (!doctorId) return [];
       
       try {
-        // Query profiles directly
-        const { data: profilesData, error } = await supabase
-          .from('profiles')
-          .select('id, first_name, last_name');
+        // Try Supabase first
+        const { data: supabasePatients, error } = await supabase
+          .from('patients')
+          .select(`
+            id, 
+            profiles (id, first_name, last_name)
+          `)
+          .eq('doctor_id', doctorId);
 
-        if (profilesData?.length) {
-          return profilesData.map(p => ({
+        if (supabasePatients?.length) {
+          return supabasePatients.map(p => ({
             id: p.id,
-            name: `${p.first_name || ''} ${p.last_name || ''}`.trim() || 'Unknown'
+            name: `${p.profiles.first_name} ${p.profiles.last_name}`
           }));
         }
         
-        // Fallback to mock data
-        return [
-          { id: '1', name: 'John Doe' },
-          { id: '2', name: 'Jane Smith' },
-          { id: '3', name: 'Robert Johnson' }
-        ];
+        // If not found in Supabase, try API
+        const response = await doctorsAPI.getDoctorPatients(doctorId);
+        return response.data || [];
       } catch (error) {
         console.error('Error fetching patients:', error);
         return [];
@@ -109,79 +105,31 @@ const DoctorPrescriptions: React.FC<DoctorPrescriptionsProps> = ({ doctorId, doc
       if (!doctorId) return [];
       
       try {
-        // Try Supabase direct query
+        // Try Supabase first
         const { data: supabasePrescriptions, error } = await supabase
           .from('prescriptions')
           .select(`
             *,
-            patient_id
+            patients (
+              profiles (first_name, last_name)
+            )
           `)
           .eq('doctor_id', doctorId);
 
         if (supabasePrescriptions?.length) {
-          // Get patient names separately
-          const patientIds = supabasePrescriptions
-            .map(p => p.patient_id)
-            .filter(Boolean);
-            
-          let patientNames: Record<string, string> = {};
-          
-          if (patientIds.length > 0) {
-            const { data: profilesData } = await supabase
-              .from('profiles')
-              .select('id, first_name, last_name')
-              .in('id', patientIds);
-              
-            if (profilesData?.length) {
-              patientNames = profilesData.reduce((acc: Record<string, string>, profile) => {
-                acc[profile.id] = `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Unknown';
-                return acc;
-              }, {});
-            }
-          }
-          
           return supabasePrescriptions.map(p => ({
             id: p.id,
-            patientName: p.patient_id && patientNames[p.patient_id] 
-              ? patientNames[p.patient_id] 
-              : 'Unknown Patient',
+            patientName: `${p.patients.profiles.first_name} ${p.patients.profiles.last_name}`,
             diagnosis: p.diagnosis,
-            date: new Date(p.date || Date.now()).toLocaleDateString(),
+            date: new Date(p.date).toLocaleDateString(),
             medicines: p.medicines,
             instructions: p.instructions,
           }));
         }
         
-        // If no data in Supabase, try API
-        try {
-          const response = await prescriptionsAPI.getDoctorPrescriptions(doctorId);
-          return response.data || [];
-        } catch (apiError) {
-          console.error('API error fetching prescriptions:', apiError);
-          // Return mock data as last resort
-          return [
-            {
-              id: '1',
-              patientName: 'John Doe',
-              diagnosis: 'Common Cold',
-              date: '2025-05-15',
-              medicines: [
-                { name: 'Acetaminophen', dosage: '500mg', frequency: 'Every 6 hours', duration: '5 days' }
-              ],
-              instructions: 'Plenty of rest and fluids'
-            },
-            {
-              id: '2',
-              patientName: 'Jane Smith',
-              diagnosis: 'Allergic Rhinitis',
-              date: '2025-05-12',
-              medicines: [
-                { name: 'Cetirizine', dosage: '10mg', frequency: 'Once daily', duration: '7 days' }
-              ],
-              instructions: 'Avoid allergens if possible'
-            }
-          ];
-        }
+        // If not found in Supabase, try API
+        const response = await prescriptionsAPI.getDoctorPrescriptions(doctorId);
+        return response.data || [];
       } catch (error) {
         console.error('Error fetching prescriptions:', error);
         return [];
@@ -235,35 +183,25 @@ const DoctorPrescriptions: React.FC<DoctorPrescriptionsProps> = ({ doctorId, doc
     }
 
     try {
-      // Format data for prescription - convert medicines to JSON compatible format
+      // Format data for prescription
       const prescriptionData = {
-        patient_id: newPrescription.patientId,
-        doctor_id: doctorId,
+        patientId: newPrescription.patientId,
+        doctorId,
         diagnosis: newPrescription.diagnosis,
-        // Ensure medicines is correctly formatted as a JSON object
-        medicines: JSON.parse(JSON.stringify(newPrescription.medicines)),
+        medicines: newPrescription.medicines,
         instructions: newPrescription.instructions,
-        date: new Date().toISOString(),
-        appointment_id: null
+        followupDate: newPrescription.followupDate,
+        doctorSignature: doctorSignature,
       };
       
-      // Try Supabase insert
+      // Try Supabase first
       const { data, error } = await supabase
         .from('prescriptions')
         .insert([prescriptionData]);
 
       if (error) {
-        console.error("Supabase error:", error);
         // If Supabase error, try API
-        await prescriptionsAPI.createPrescription({
-          patientId: newPrescription.patientId,
-          doctorId,
-          diagnosis: newPrescription.diagnosis,
-          medicines: newPrescription.medicines,
-          instructions: newPrescription.instructions,
-          followupDate: newPrescription.followupDate,
-          doctorSignature: doctorSignature,
-        });
+        await prescriptionsAPI.createPrescription(prescriptionData);
       }
 
       toast.success('Prescription created successfully!');
@@ -317,7 +255,7 @@ const DoctorPrescriptions: React.FC<DoctorPrescriptionsProps> = ({ doctorId, doc
           <Dialog open={isCreatingPrescription} onOpenChange={setIsCreatingPrescription}>
             <DialogTrigger asChild>
               <Button>
-                <ClipboardEdit className="h-4 w-4 mr-2" />
+                <Prescription className="h-4 w-4 mr-2" />
                 New Prescription
               </Button>
             </DialogTrigger>
@@ -502,7 +440,7 @@ const DoctorPrescriptions: React.FC<DoctorPrescriptionsProps> = ({ doctorId, doc
               className="mt-4"
               onClick={() => setIsCreatingPrescription(true)}
             >
-              <ClipboardEdit className="h-4 w-4 mr-2" />
+              <Prescription className="h-4 w-4 mr-2" />
               Create Your First Prescription
             </Button>
           </div>

@@ -31,34 +31,12 @@ const DoctorSchema = new mongoose.Schema({
   languages: [String],
   about: String,
   profileImage: String,
-  signature: String,
+  signature: String, // Added field for doctor's signature
   consultationFee: {
     type: Number,
     required: true
   },
-  phone: String,
-  address: String,
-  isVerified: {
-    type: Boolean,
-    default: false
-  },
-  licenseNumber: String,
-  specializations: [String],
-  hospitalAffiliations: [String],
-  createdAt: {
-    type: Date,
-    default: Date.now
-  },
-  updatedAt: {
-    type: Date,
-    default: Date.now
-  }
-});
-
-// Update the updatedAt timestamp before saving
-DoctorSchema.pre('save', function(next) {
-  this.updatedAt = new Date();
-  next();
+  phone: String
 });
 
 module.exports = mongoose.model('Doctor', DoctorSchema);

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { prescriptionsAPI } from '@/services/api';
@@ -18,7 +17,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Loader2, FileText, Search, Prescription } from 'lucide-react';
+import { Loader2, FileText, Search, ClipboardEdit } from 'lucide-react';
 import { 
   Dialog, 
   DialogContent, 
@@ -73,23 +72,21 @@ const DoctorPrescriptions: React.FC<DoctorPrescriptionsProps> = ({ doctorId, doc
       try {
         // Try Supabase first
         const { data: supabasePatients, error } = await supabase
-          .from('patients')
-          .select(`
-            id, 
-            profiles (id, first_name, last_name)
-          `)
-          .eq('doctor_id', doctorId);
+          .from('profiles')
+          .select('id, first_name, last_name, user_role')
+          .eq('user_role', 'patient');
 
         if (supabasePatients?.length) {
           return supabasePatients.map(p => ({
             id: p.id,
-            name: `${p.profiles.first_name} ${p.profiles.last_name}`
+            name: `${p.first_name} ${p.last_name}`
           }));
         }
         
         // If not found in Supabase, try API
-        const response = await doctorsAPI.getDoctorPatients(doctorId);
-        return response.data || [];
+        const response = await fetch(`/api/doctors/${doctorId}/patients`);
+        const data = await response.json();
+        return data || [];
       } catch (error) {
         console.error('Error fetching patients:', error);
         return [];
@@ -110,8 +107,8 @@ const DoctorPrescriptions: React.FC<DoctorPrescriptionsProps> = ({ doctorId, doc
           .from('prescriptions')
           .select(`
             *,
-            patients (
-              profiles (first_name, last_name)
+            profiles (
+              first_name, last_name
             )
           `)
           .eq('doctor_id', doctorId);
@@ -119,7 +116,7 @@ const DoctorPrescriptions: React.FC<DoctorPrescriptionsProps> = ({ doctorId, doc
         if (supabasePrescriptions?.length) {
           return supabasePrescriptions.map(p => ({
             id: p.id,
-            patientName: `${p.patients.profiles.first_name} ${p.patients.profiles.last_name}`,
+            patientName: `${p.profiles.first_name} ${p.profiles.last_name}`,
             diagnosis: p.diagnosis,
             date: new Date(p.date).toLocaleDateString(),
             medicines: p.medicines,
@@ -255,7 +252,7 @@ const DoctorPrescriptions: React.FC<DoctorPrescriptionsProps> = ({ doctorId, doc
           <Dialog open={isCreatingPrescription} onOpenChange={setIsCreatingPrescription}>
             <DialogTrigger asChild>
               <Button>
-                <Prescription className="h-4 w-4 mr-2" />
+                <ClipboardEdit className="h-4 w-4 mr-2" />
                 New Prescription
               </Button>
             </DialogTrigger>
@@ -440,7 +437,7 @@ const DoctorPrescriptions: React.FC<DoctorPrescriptionsProps> = ({ doctorId, doc
               className="mt-4"
               onClick={() => setIsCreatingPrescription(true)}
             >
-              <Prescription className="h-4 w-4 mr-2" />
+              <ClipboardEdit className="h-4 w-4 mr-2" />
               Create Your First Prescription
             </Button>
           </div>

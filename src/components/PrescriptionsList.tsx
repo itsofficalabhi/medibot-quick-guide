@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -33,6 +34,7 @@ interface Prescription {
   doctorId?: string;
   status?: string;
   followupDate?: string;
+  doctorSignature?: string; // Added doctor signature field
 }
 
 interface PrescriptionsListProps {
@@ -99,6 +101,7 @@ const PrescriptionsList: React.FC<PrescriptionsListProps> = ({ userId, userRole 
               .status-active { background-color: #d1fae5; color: #065f46; }
               .status-pending { background-color: #fef3c7; color: #92400e; }
               .status-completed { background-color: #e0e7ff; color: #3730a3; }
+              .signature { height: 60px; margin-bottom: 10px; }
             </style>
           </head>
           <body>
@@ -168,7 +171,10 @@ const PrescriptionsList: React.FC<PrescriptionsListProps> = ({ userId, userRole 
             
             <div class="footer">
               <div>Doctor's Signature</div>
-              <div>____________________</div>
+              ${prescription.doctorSignature ? 
+                `<img src="${prescription.doctorSignature}" class="signature" alt="Doctor's signature" />` : 
+                `<div>____________________</div>`
+              }
             </div>
           </body>
         </html>
@@ -287,6 +293,21 @@ const PrescriptionsList: React.FC<PrescriptionsListProps> = ({ userId, userRole 
                     <div className="flex items-center text-sm text-primary">
                       <Calendar className="h-4 w-4 mr-2" />
                       {new Date(prescription.followupDate).toLocaleDateString()}
+                    </div>
+                  </div>
+                </>
+              )}
+              {prescription.doctorSignature && (
+                <>
+                  <Separator className="my-3" />
+                  <div>
+                    <h4 className="text-sm font-medium mb-1">Doctor's Signature</h4>
+                    <div className="flex justify-end mt-2">
+                      <img 
+                        src={prescription.doctorSignature} 
+                        alt="Doctor's signature"
+                        className="h-14" 
+                      />
                     </div>
                   </div>
                 </>

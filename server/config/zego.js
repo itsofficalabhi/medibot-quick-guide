@@ -1,3 +1,4 @@
+
 const { ZegoExpressEngine } = require('zego-express-engine-webrtc');
 
 const zegoConfig = {

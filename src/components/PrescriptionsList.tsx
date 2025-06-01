@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -83,10 +82,7 @@ const PrescriptionsList: React.FC<PrescriptionsListProps> = ({ userId, userRole 
       localStorage.setItem(`prescriptions_${userId}`, JSON.stringify(updatedPrescriptions));
     }
     
-    toast({
-      title: "Status Updated",
-      description: `Prescription status changed to ${newStatus}`,
-    });
+    toast.success(`Prescription status changed to ${newStatus}`);
   };
 
   const printPrescription = (prescription: Prescription) => {

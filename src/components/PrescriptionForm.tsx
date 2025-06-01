@@ -57,11 +57,7 @@ const PrescriptionForm: React.FC<PrescriptionFormProps> = ({ doctorId, onComplet
     e.preventDefault();
 
     if (!patientName || !patientId || !diagnosis || medicines.some(med => !med.name || !med.dosage || !med.frequency || !med.duration)) {
-      toast({
-        title: "Error",
-        description: "Please fill in all required fields for patient info, diagnosis, and all medicines.",
-        variant: "destructive"
-      });
+      toast.error("Please fill in all required fields for patient info, diagnosis, and all medicines.");
       return;
     }
 

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -59,23 +58,15 @@ const DoctorProfilePage: React.FC = () => {
   
   const handleBookAppointment = () => {
     if (!isAuthenticated) {
-      toast({
-        title: "Authentication Required",
-        description: "Please login to book an appointment",
-        variant: "destructive",
-      });
+      toast.error("Please login to book an appointment");
       navigate('/login', { state: { from: `/doctors/${id}` } });
       return;
     }
 
     if (!selectedDate || !selectedTimeSlot || !selectedConsultationType) {
-      toast({
-        title: "Incomplete Selection",
-        description: selectedConsultationType 
-          ? "Please select a date and time" 
-          : "Please select consultation type, date, and time",
-        variant: "destructive",
-      });
+      toast.error(selectedConsultationType 
+        ? "Please select a date and time" 
+        : "Please select consultation type, date, and time");
       return;
     }
 
@@ -119,10 +110,7 @@ const DoctorProfilePage: React.FC = () => {
     }
     
     // Show success toast
-    toast({
-      title: "Appointment Booked Successfully",
-      description: `Your ${selectedConsultationType} consultation has been booked for ${selectedDate} at ${selectedTimeSlot}`,
-    });
+    toast.success(`Your ${selectedConsultationType} consultation has been booked for ${selectedDate} at ${selectedTimeSlot}`);
   };
   
   const handlePaymentCancel = () => {

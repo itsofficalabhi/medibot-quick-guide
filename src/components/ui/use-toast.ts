@@ -1,6 +1,10 @@
 
-import { useToast as useToastHook } from "@/hooks/use-toast";
 import { toast } from "sonner";
 
-export const useToast = useToastHook;
+// Re-export toast from sonner for compatibility
 export { toast };
+
+// Create a useToast hook that returns the toast function
+export const useToast = () => {
+  return { toast };
+};

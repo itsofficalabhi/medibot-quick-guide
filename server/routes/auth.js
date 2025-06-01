@@ -64,7 +64,7 @@ const initializeAdmin = async () => {
         email: 'applied.abhishek@gmail.com',
         password: 'admin',
         role: 'admin',
-        mobile: '1234567890' // Optional
+        mobile: '1234567890'
       });
       
       await adminUser.save();
@@ -222,12 +222,11 @@ router.put('/:id', authorize('admin'), async (req, res) => {
 // Admin routes - Delete user
 router.delete('/:id', authorize('admin'), async (req, res) => {
   try {
-    const user = await User.findById(req.params.id);
+    const user = await User.findByIdAndDelete(req.params.id);
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
     
-    await user.remove();
     res.json({ message: 'User deleted successfully' });
   } catch (error) {
     console.error(error);
@@ -272,8 +271,4 @@ router.post('/admin', authorize('admin'), async (req, res) => {
   }
 });
 
-// Export authorize middleware for use in other routes
-module.exports = {
-  router,
-  authorize
-};
+module.exports = router;

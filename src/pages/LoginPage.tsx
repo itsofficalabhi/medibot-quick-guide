@@ -1,11 +1,11 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { useAuth } from '@/hooks/useAuth';
-import { useToast } from '@/components/ui/use-toast';
+import { toast } from '@/components/ui/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const LoginPage: React.FC = () => {
@@ -13,14 +13,19 @@ const LoginPage: React.FC = () => {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  const { login } = useAuth();
+  const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const { toast } = useToast();
   const [loginTab, setLoginTab] = useState('user');
   
-  // Get the intended destination from location state, or default to dashboard
   const from = (location.state as { from?: string })?.from || '/dashboard';
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate(from, { replace: true });
+    }
+  }, [isAuthenticated, navigate, from]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,14 +36,7 @@ const LoginPage: React.FC = () => {
       const success = await login(email, password);
       
       if (success) {
-        // Redirect to dashboard - the ProtectedRoute component will handle role-specific redirection
-        navigate(from);
-        
-        // Show success toast
-        toast({
-          title: "Login Successful",
-          description: "You have successfully logged in",
-        });
+        navigate(from, { replace: true });
       } else {
         setErrorMessage('Invalid email or password');
       }
@@ -50,14 +48,12 @@ const LoginPage: React.FC = () => {
     }
   };
 
-  // Prefill admin credentials
   const handleAdminLogin = () => {
     setEmail('applied.abhishek@gmail.com');
     setPassword('admin');
     setLoginTab('admin');
   };
 
-  // Create account information UI for demo purposes
   const DemoAccounts = () => (
     <div className="mt-6 border-t pt-4">
       <h3 className="text-sm font-medium mb-2">Demo Accounts</h3>
@@ -92,9 +88,6 @@ const LoginPage: React.FC = () => {
           </div>
         </div>
       </div>
-      <p className="text-xs text-muted-foreground mt-2">
-        Additional accounts (doctor1-6@test.com, patient1-15@test.com) with same passwords are available.
-      </p>
     </div>
   );
 

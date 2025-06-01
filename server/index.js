@@ -4,8 +4,8 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const connectDB = require('./config/database');
 
-// Routes - note: auth routes are now exported differently
-const { router: authRoutes, authorize } = require('./routes/auth');
+// Routes
+const authRoutes = require('./routes/auth');
 const doctorRoutes = require('./routes/doctors');
 const appointmentRoutes = require('./routes/appointments');
 const prescriptionRoutes = require('./routes/prescriptions');
@@ -43,7 +43,6 @@ const initializeDatabase = async () => {
 
 // Initialize database before starting server
 initializeDatabase().then(() => {
-  // Log NLP service status
   console.log('NLP Service URL is', process.env.NLP_SERVICE_URL ? 'configured' : 'not configured');
 
   // API Routes with error handling middleware

@@ -4,6 +4,7 @@ const router = express.Router();
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+const { validationRules, checkValidationResult } = require('../middleware/validation');
 
 // Middleware to verify token and role
 const authorize = (requiredRole) => {
@@ -17,7 +18,10 @@ const authorize = (requiredRole) => {
       }
       
       // Verify token
-      const secret = process.env.JWT_SECRET || 'mediclinic_jwt_secret';
+      const secret = process.env.JWT_SECRET;
+      if (!secret) {
+        throw new Error('JWT_SECRET environment variable is required');
+      }
       const decoded = jwt.verify(token, secret);
       
       // Get user from database
@@ -44,9 +48,13 @@ const authorize = (requiredRole) => {
 
 // Generate JWT Token
 const generateToken = (user) => {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error('JWT_SECRET environment variable is required');
+  }
   return jwt.sign(
     { id: user._id, role: user.role },
-    process.env.JWT_SECRET || 'mediclinic_jwt_secret',
+    secret,
     { expiresIn: '30d' }
   );
 };
@@ -79,7 +87,7 @@ const initializeAdmin = async () => {
 initializeAdmin();
 
 // Register a new user
-router.post('/register', async (req, res) => {
+router.post('/register', validationRules.userRegistration, checkValidationResult, async (req, res) => {
   try {
     const { name, email, password, role, mobile } = req.body;
     
@@ -120,7 +128,7 @@ router.post('/register', async (req, res) => {
 });
 
 // Login user
-router.post('/login', async (req, res) => {
+router.post('/login', validationRules.userLogin, checkValidationResult, async (req, res) => {
   try {
     const { email, password } = req.body;
     

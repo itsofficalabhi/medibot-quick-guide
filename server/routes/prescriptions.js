@@ -3,6 +3,7 @@ const express = require('express');
 const router = express.Router();
 const Prescription = require('../models/Prescription');
 const Appointment = require('../models/Appointment');
+const { validationRules, checkValidationResult } = require('../middleware/validation');
 
 // Get prescriptions by patient ID
 router.get('/patient/:patientId', async (req, res) => {
@@ -46,7 +47,7 @@ router.get('/appointment/:appointmentId', async (req, res) => {
 });
 
 // Create a new prescription
-router.post('/', async (req, res) => {
+router.post('/', validationRules.prescriptionCreation, checkValidationResult, async (req, res) => {
   try {
     const {
       patientId,

@@ -5,6 +5,7 @@ const Appointment = require('../models/Appointment');
 const User = require('../models/User');
 const Doctor = require('../models/Doctor');
 const mongoose = require('mongoose');
+const { validationRules, checkValidationResult } = require('../middleware/validation');
 
 // Get all appointments (admin endpoint)
 router.get('/', async (req, res) => {
@@ -154,7 +155,7 @@ router.get('/doctor/:doctorId/billing', async (req, res) => {
 });
 
 // Create a new appointment
-router.post('/', async (req, res) => {
+router.post('/', validationRules.appointmentCreation, checkValidationResult, async (req, res) => {
   try {
     const {
       patientId,

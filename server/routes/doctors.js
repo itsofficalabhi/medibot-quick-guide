@@ -5,6 +5,7 @@ const Doctor = require('../models/Doctor');
 const User = require('../models/User');
 const Appointment = require('../models/Appointment');
 const mongoose = require('mongoose');
+const { validationRules, checkValidationResult } = require('../middleware/validation');
 
 // Get all doctors
 router.get('/', async (req, res) => {
@@ -45,7 +46,7 @@ router.get('/:id/appointments', async (req, res) => {
 });
 
 // Create or update doctor profile
-router.post('/', async (req, res) => {
+router.post('/', validationRules.doctorProfile, checkValidationResult, async (req, res) => {
   try {
     const {
       userId,
